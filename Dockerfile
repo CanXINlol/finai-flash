@@ -1,34 +1,39 @@
-# ── Stage 1: Frontend build ──────────────────────────────
 FROM node:20-slim AS frontend-builder
+
 WORKDIR /frontend
-COPY frontend/package*.json ./
-RUN npm ci
+
+COPY frontend/package.json ./package.json
+RUN npm install
+
 COPY frontend/ ./
 RUN npm run build
 
-# ── Stage 2: Python runtime ──────────────────────────────
+
 FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Python deps
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e .
+COPY requirements.txt ./requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# App source
 COPY app/ ./app/
 COPY alembic/ ./alembic/
-COPY alembic.ini ./
+COPY scripts/ ./scripts/
+COPY alembic.ini ./alembic.ini
+COPY pyproject.toml ./pyproject.toml
+COPY .env.example ./.env.example
+COPY README.md ./README.md
 
-# Frontend static files
 COPY --from=frontend-builder /frontend/dist ./static/
 
-# Data directory
 RUN mkdir -p /app/data
 
 EXPOSE 8888

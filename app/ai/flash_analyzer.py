@@ -1,16 +1,37 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from typing import Any, AsyncIterator
 
 import httpx
 
-from app.ai.flash_prompts import FLASH_HUMAN_TEMPLATE, FLASH_SYSTEM_PROMPT, build_positions_text
+from app.ai.flash_prompts import (
+    FLASH_HUMAN_TEMPLATE,
+    FLASH_SYSTEM_PROMPT,
+    build_positions_text,
+    build_retry_feedback,
+    default_quality_feedback,
+)
 from app.config import get_settings
 from app.models.flash_analysis import FlashAnalysis
 
 settings = get_settings()
+
+GENERIC_PHRASES = (
+    "可能影响市场",
+    "建议关注",
+    "谨慎操作",
+    "市场情绪",
+    "市场波动",
+    "产生重大影响",
+    "值得关注",
+)
+
+HORIZON_PATTERN = re.compile(r"(分钟|小时|日内|短线|本周|未来\d+[天日周]|\d+-\d+日|\d+-\d+周|数日|数周|中线)")
+RISK_PATTERN = re.compile(r"(止损|失效|若|如果|风险|跌破|站稳|确认|除非)")
+YEAR_PATTERN = re.compile(r"(19|20)\d{2}")
 
 
 class FlashAnalyzer:
@@ -21,12 +42,14 @@ class FlashAnalyzer:
         temperature: float = 0.1,
         timeout: int | None = None,
         num_predict: int = 1024,
+        quality_retries: int = 1,
     ):
         self.base_url = (base_url or settings.ollama_host).rstrip("/")
         self.default_model = model or settings.model
         self.temperature = temperature
         self.timeout = timeout or settings.ollama_timeout
         self.num_predict = num_predict
+        self.quality_retries = quality_retries
 
     def ensure_ready(self) -> None:
         self._get_langchain_types()
@@ -38,18 +61,11 @@ class FlashAnalyzer:
         model: str | None = None,
     ) -> FlashAnalysis:
         selected_model = model or self.default_model
-        chain = self._build_chain(selected_model)
-        try:
-            response = await chain.ainvoke(self._build_payload(text, positions))
-        except Exception as exc:
-            raise RuntimeError(self._format_model_error(exc, selected_model)) from exc
-        try:
-            return self._parse_output(self._content_to_text(response))
-        except Exception as exc:
-            raise RuntimeError(
-                f"Model `{selected_model}` returned invalid JSON. "
-                f"Original error: {exc}"
-            ) from exc
+        return await self._analyze_with_quality_retry(
+            text=text,
+            positions=positions,
+            selected_model=selected_model,
+        )
 
     async def stream_json(
         self,
@@ -60,7 +76,7 @@ class FlashAnalyzer:
         selected_model = model or self.default_model
         chain = self._build_chain(selected_model)
         try:
-            async for chunk in chain.astream(self._build_payload(text, positions)):
+            async for chunk in chain.astream(self._build_payload(text, positions, default_quality_feedback())):
                 chunk_text = self._content_to_text(chunk)
                 if chunk_text:
                     yield chunk_text
@@ -74,12 +90,69 @@ class FlashAnalyzer:
         model: str | None = None,
     ) -> tuple[FlashAnalysis, int, str]:
         selected_model = model or self.default_model
-        chain = self._build_chain(selected_model)
         started_at = time.monotonic()
-        response = await chain.ainvoke(self._build_payload(text, positions))
+        result = await self._analyze_with_quality_retry(
+            text=text,
+            positions=positions,
+            selected_model=selected_model,
+        )
         latency_ms = int((time.monotonic() - started_at) * 1000)
-        result = self._parse_output(self._content_to_text(response))
         return result, latency_ms, selected_model
+
+    async def _analyze_with_quality_retry(
+        self,
+        text: str,
+        positions: list[str] | None,
+        selected_model: str,
+    ) -> FlashAnalysis:
+        quality_feedback = default_quality_feedback()
+        last_exception: Exception | None = None
+
+        for attempt in range(self.quality_retries + 1):
+            chain = self._build_chain(selected_model)
+            try:
+                response = await chain.ainvoke(self._build_payload(text, positions, quality_feedback))
+            except Exception as exc:
+                if attempt < self.quality_retries:
+                    quality_feedback = build_retry_feedback(
+                        [f"上次生成阶段失败：{self._short_error_message(exc)}"]
+                    )
+                    last_exception = exc
+                    continue
+                raise RuntimeError(self._format_model_error(exc, selected_model)) from exc
+
+            raw = self._content_to_text(response)
+            try:
+                parsed = self._parse_output(raw)
+            except Exception as exc:
+                if attempt < self.quality_retries:
+                    quality_feedback = build_retry_feedback(
+                        [f"上次输出不是合法 JSON 或字段格式不对：{self._short_error_message(exc)}"]
+                    )
+                    last_exception = exc
+                    continue
+                raise RuntimeError(
+                    f"Model `{selected_model}` returned invalid JSON. Original error: {exc}"
+                ) from exc
+
+            issues = self._quality_issues(parsed)
+            if not issues:
+                return parsed
+
+            last_exception = RuntimeError("; ".join(issues))
+            if attempt < self.quality_retries:
+                quality_feedback = build_retry_feedback(issues)
+                continue
+
+            raise RuntimeError(
+                f"Model `{selected_model}` returned an analysis that was too generic: "
+                + "; ".join(issues)
+            )
+
+        raise RuntimeError(
+            f"Flash analysis failed with model `{selected_model}`: "
+            f"{self._short_error_message(last_exception) if last_exception else 'unknown error'}"
+        )
 
     async def health_check(self) -> dict[str, Any]:
         try:
@@ -148,10 +221,11 @@ class FlashAnalyzer:
         return prompt | llm
 
     @staticmethod
-    def _build_payload(text: str, positions: list[str] | None) -> dict[str, str]:
+    def _build_payload(text: str, positions: list[str] | None, quality_feedback: str) -> dict[str, str]:
         return {
             "text": text.strip(),
             "positions_text": build_positions_text(positions),
+            "quality_feedback": quality_feedback.strip(),
         }
 
     @staticmethod
@@ -221,6 +295,38 @@ class FlashAnalyzer:
                 "Missing LangChain/Ollama dependencies. Install `langchain` and `langchain-ollama` first."
             ) from exc
         return ChatPromptTemplate, ChatOllama
+
+    @staticmethod
+    def _short_error_message(exc: Exception | None) -> str:
+        if exc is None:
+            return "unknown error"
+        message = str(exc).strip()
+        return message[:240]
+
+    @staticmethod
+    def _quality_issues(result: FlashAnalysis) -> list[str]:
+        issues: list[str] = []
+        summary = result.summary.strip()
+        suggestion = result.trading_suggestion.strip()
+        historical = result.historical_reference.strip()
+
+        if len(summary) < 12:
+            issues.append("summary 过短，没有清楚说明事件、逻辑和主导资产。")
+        if any(phrase in summary for phrase in GENERIC_PHRASES):
+            issues.append("summary 仍然使用了空泛表述，缺少明确传导逻辑。")
+        if len(result.affected_assets) < 2:
+            issues.append("affected_assets 太少，至少应给出两个相关资产或板块。")
+        if not HORIZON_PATTERN.search(suggestion):
+            issues.append("trading_suggestion 缺少明确时间窗口。")
+        if not RISK_PATTERN.search(suggestion):
+            issues.append("trading_suggestion 缺少风险提示或失效条件。")
+        if "建议关注" in suggestion and "若" not in suggestion and "如果" not in suggestion:
+            issues.append("trading_suggestion 过于泛泛，没有给出执行条件。")
+        if not YEAR_PATTERN.search(historical):
+            issues.append("historical_reference 缺少具体年份。")
+        if len(historical) < 12:
+            issues.append("historical_reference 过短，没有说明历史事件和市场反应。")
+        return issues
 
 
 _flash_analyzer: FlashAnalyzer | None = None

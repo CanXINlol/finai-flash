@@ -9,6 +9,11 @@ from sqlmodel import func, select
 from app.models.news import NewsItem, NewsSource
 
 
+async def get_by_id(session: AsyncSession, news_id: int) -> Optional[NewsItem]:
+    result = await session.execute(select(NewsItem).where(NewsItem.id == news_id))
+    return result.scalar_one_or_none()
+
+
 async def get_by_guid(session: AsyncSession, guid: str) -> Optional[NewsItem]:
     result = await session.execute(select(NewsItem).where(NewsItem.guid == guid))
     return result.scalar_one_or_none()

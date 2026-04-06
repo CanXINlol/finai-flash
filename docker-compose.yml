@@ -1,25 +1,37 @@
 services:
   finai-flash:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: finai-flash
     restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8888
+      OLLAMA_HOST: http://ollama:11434
+      MODEL: ${MODEL:-qwen2.5:7b}
+      DATABASE_URL: sqlite+aiosqlite:///./data/finai.db
+      RSSHUB_BASE_URL: http://rsshub:1200
+      COLLECT_INTERVAL_SECONDS: ${COLLECT_INTERVAL_SECONDS:-300}
+      MAX_NEWS_AGE_HOURS: ${MAX_NEWS_AGE_HOURS:-24}
+      AUTO_ANALYZE_FLASH: ${AUTO_ANALYZE_FLASH:-true}
+      ALERT_SCORE_THRESHOLD: ${ALERT_SCORE_THRESHOLD:-7}
+      ANALYSIS_LANGUAGE: ${ANALYSIS_LANGUAGE:-zh}
+      MY_POSITIONS: ${MY_POSITIONS:-}
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN:-}
+      TG_CHAT_ID: ${TG_CHAT_ID:-}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
     ports:
       - "${PORT:-8888}:8888"
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-      - MODEL=${MODEL:-qwen2.5:7b}
-      - DATABASE_URL=sqlite+aiosqlite:///./data/finai.db
-      - TG_BOT_TOKEN=${TG_BOT_TOKEN:-}
-      - TG_CHAT_ID=${TG_CHAT_ID:-}
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
-      - ALERT_SCORE_THRESHOLD=${ALERT_SCORE_THRESHOLD:-7}
-      - MY_POSITIONS=${MY_POSITIONS:-}
-      - ANALYSIS_LANGUAGE=${ANALYSIS_LANGUAGE:-zh}
     volumes:
       - finai-data:/app/data
     depends_on:
       ollama:
         condition: service_healthy
+      rsshub:
+        condition: service_started
+      ollama-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8888/health"]
       interval: 30s
@@ -30,30 +42,56 @@ services:
     image: ollama/ollama:latest
     container_name: finai-ollama
     restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
     volumes:
       - ollama-models:/root/.ollama
-    ports:
-      - "11434:11434"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 30s
-    # Uncomment for GPU support:
+      retries: 10
+      start_period: 20s
+    # Uncomment this block if your Docker host has NVIDIA GPU runtime configured.
     # deploy:
     #   resources:
     #     reservations:
     #       devices:
-    #         - capabilities: [gpu]
+    #         - capabilities: ["gpu"]
 
-  redis:
-    image: redis:7-alpine
-    container_name: finai-redis
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: finai-ollama-init
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      MODEL: ${MODEL:-qwen2.5:7b}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - ollama pull "${MODEL:-qwen2.5:7b}"
+
+  rsshub:
+    image: diygod/rsshub:latest
+    container_name: finai-rsshub
     restart: unless-stopped
-    profiles: ["full"]
     ports:
-      - "6379:6379"
+      - "${RSSHUB_PORT:-1200}:1200"
+    environment:
+      NODE_ENV: production
+      CACHE_TYPE: redis
+      REDIS_URL: redis://rsshub-redis:6379/
+    depends_on:
+      rsshub-redis:
+        condition: service_started
+
+  rsshub-redis:
+    image: redis:7-alpine
+    container_name: finai-rsshub-redis
+    restart: unless-stopped
 
 volumes:
   finai-data:

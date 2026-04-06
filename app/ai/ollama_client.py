@@ -30,7 +30,11 @@ class OllamaClient:
                 resp = await client.get(f"{self.base_url}/api/tags")
                 resp.raise_for_status()
                 names = [t.get("name", "") for t in resp.json().get("models", [])]
-                return any(self.model.split(":")[0] in n for n in names)
+                selected_model = self.model.strip()
+                model_base = selected_model.split(":")[0]
+                return selected_model in names or (
+                    ":" not in selected_model and any(name.split(":")[0] == model_base for name in names)
+                )
         except Exception:
             return False
 

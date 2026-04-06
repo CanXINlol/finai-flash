@@ -33,6 +33,8 @@ def flash_event(item) -> dict:
             "source_url": item.source_url,
             "pub_time": item.pub_time.isoformat(),
             "fetched_at": item.fetched_at.isoformat(),
+            "is_analyzed": getattr(item, "is_analyzed", False),
+            "analysis": None,
         },
     }
 

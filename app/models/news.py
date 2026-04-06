@@ -53,6 +53,14 @@ class NewsItemList(SQLModel):
     total: int
 
 
+class FlashAnalysisSummaryRead(SQLModel):
+    score: int
+    sentiment: Sentiment
+    summary: str
+    suggestion: str
+    portfolio_note: Optional[str] = None
+
+
 class FlashItemRead(SQLModel):
     id: int
     title: str
@@ -61,3 +69,5 @@ class FlashItemRead(SQLModel):
     source_url: Optional[str]
     pub_time: datetime
     fetched_at: datetime
+    is_analyzed: bool = False
+    analysis: Optional[FlashAnalysisSummaryRead] = None
