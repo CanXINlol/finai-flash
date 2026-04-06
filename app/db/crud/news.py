@@ -1,13 +1,30 @@
 from __future__ import annotations
+
 from datetime import datetime, timedelta
 from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, func
+from sqlmodel import func, select
+
 from app.models.news import NewsItem, NewsSource
 
 
 async def get_by_guid(session: AsyncSession, guid: str) -> Optional[NewsItem]:
     result = await session.execute(select(NewsItem).where(NewsItem.guid == guid))
+    return result.scalar_one_or_none()
+
+
+async def get_by_title_and_pub_time(
+    session: AsyncSession,
+    title: str,
+    pub_time: datetime,
+) -> Optional[NewsItem]:
+    result = await session.execute(
+        select(NewsItem).where(
+            NewsItem.title == title,
+            NewsItem.pub_time == pub_time,
+        )
+    )
     return result.scalar_one_or_none()
 
 
@@ -26,14 +43,23 @@ async def get_recent(
     since_hours: int = 24,
 ) -> tuple[list[NewsItem], int]:
     cutoff = datetime.utcnow() - timedelta(hours=since_hours)
-    q = select(NewsItem).where(NewsItem.pub_time >= cutoff)
+    query = select(NewsItem).where(NewsItem.pub_time >= cutoff)
     if source:
-        q = q.where(NewsItem.source == source)
-    count_q = select(func.count()).select_from(q.subquery())
-    total = (await session.execute(count_q)).scalar_one()
-    q = q.order_by(NewsItem.pub_time.desc()).offset(offset).limit(limit)
-    result = await session.execute(q)
+        query = query.where(NewsItem.source == source)
+    count_query = select(func.count()).select_from(query.subquery())
+    total = (await session.execute(count_query)).scalar_one()
+    query = query.order_by(NewsItem.pub_time.desc()).offset(offset).limit(limit)
+    result = await session.execute(query)
     return result.scalars().all(), total
+
+
+async def get_latest_flash(session: AsyncSession, limit: int = 10) -> list[NewsItem]:
+    result = await session.execute(
+        select(NewsItem)
+        .order_by(NewsItem.pub_time.desc(), NewsItem.id.desc())
+        .limit(limit)
+    )
+    return result.scalars().all()
 
 
 async def mark_analyzed(session: AsyncSession, news_id: int) -> None:
@@ -46,11 +72,11 @@ async def mark_analyzed(session: AsyncSession, news_id: int) -> None:
 
 
 async def get_unanalyzed(session: AsyncSession, limit: int = 10) -> list[NewsItem]:
-    q = (
+    query = (
         select(NewsItem)
         .where(NewsItem.is_analyzed == False)
         .order_by(NewsItem.pub_time.desc())
         .limit(limit)
     )
-    result = await session.execute(q)
+    result = await session.execute(query)
     return result.scalars().all()

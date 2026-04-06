@@ -3,18 +3,20 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+
 from sqlmodel import Field, SQLModel
 
 
 class Sentiment(str, Enum):
-    BULLISH = "bullish"    # 利多
-    BEARISH = "bearish"    # 利空
-    NEUTRAL = "neutral"    # 中性
+    BULLISH = "bullish"
+    BEARISH = "bearish"
+    NEUTRAL = "neutral"
 
 
 class NewsSource(str, Enum):
     JIN10 = "jin10"
     CLS = "cls"
+    CCTV_FINANCE = "cctv_finance"
     REUTERS = "reuters"
     BLOOMBERG = "bloomberg"
     UNKNOWN = "unknown"
@@ -34,7 +36,6 @@ class NewsItem(SQLModel, table=True):
     is_analyzed: bool = Field(default=False)
 
 
-# ── Pydantic schemas (API layer) ────────────────────────────────────────────
 class NewsItemRead(SQLModel):
     id: int
     guid: str
@@ -50,3 +51,13 @@ class NewsItemRead(SQLModel):
 class NewsItemList(SQLModel):
     items: list[NewsItemRead]
     total: int
+
+
+class FlashItemRead(SQLModel):
+    id: int
+    title: str
+    content: Optional[str]
+    source: NewsSource
+    source_url: Optional[str]
+    pub_time: datetime
+    fetched_at: datetime

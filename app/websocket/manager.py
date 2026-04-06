@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import asyncio
 import json
+
 from fastapi import WebSocket
 
 
@@ -16,17 +18,17 @@ class ConnectionManager:
 
     async def disconnect(self, ws: WebSocket):
         async with self._lock:
-            self._connections = [c for c in self._connections if c is not ws]
+            self._connections = [connection for connection in self._connections if connection is not ws]
 
     async def broadcast(self, data: dict):
         payload = json.dumps(data, ensure_ascii=False, default=str)
-        dead = []
+        dead_connections = []
         for ws in list(self._connections):
             try:
                 await ws.send_text(payload)
             except Exception:
-                dead.append(ws)
-        for ws in dead:
+                dead_connections.append(ws)
+        for ws in dead_connections:
             await self.disconnect(ws)
 
     @property
@@ -35,3 +37,4 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+flash_manager = ConnectionManager()

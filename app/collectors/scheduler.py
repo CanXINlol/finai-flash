@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from app.config import get_settings
 
 settings = get_settings()
@@ -7,12 +9,14 @@ scheduler = AsyncIOScheduler()
 
 
 def start_scheduler(news_service):
-    """Register all collectors and start the APScheduler."""
-    from app.collectors.jin10 import Jin10Collector
-    from app.collectors.cls import CLSCollector
-    from app.collectors.reuters import ReutersCollector
+    if scheduler.running:
+        return
 
-    collectors = [Jin10Collector(), CLSCollector(), ReutersCollector()]
+    from app.collectors.cctv_finance import CCTVFinanceCollector
+    from app.collectors.cls import CLSCollector
+    from app.collectors.jin10 import Jin10Collector
+
+    collectors = [Jin10Collector(), CLSCollector(), CCTVFinanceCollector()]
 
     async def collect_all():
         for collector in collectors:
@@ -20,8 +24,8 @@ def start_scheduler(news_service):
                 items = await collector.fetch()
                 for raw in items:
                     await news_service.ingest(raw)
-            except Exception as e:
-                print(f"[Scheduler] collector error: {e}")
+            except Exception as exc:
+                print(f"[Scheduler] collector error from {collector.__class__.__name__}: {exc}")
 
     scheduler.add_job(
         collect_all,
@@ -29,6 +33,8 @@ def start_scheduler(news_service):
         seconds=settings.collect_interval_seconds,
         id="collect_all",
         replace_existing=True,
+        coalesce=True,
+        max_instances=1,
     )
     scheduler.start()
     print(f"[Scheduler] started, interval={settings.collect_interval_seconds}s")

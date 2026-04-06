@@ -8,6 +8,7 @@ from app.models.news import Sentiment
 
 class AnalysisResult(SQLModel, table=True):
     __tablename__ = "analysis_results"
+    model_config = {"protected_namespaces": ()}
 
     id: Optional[int] = Field(default=None, primary_key=True)
     news_id: int = Field(index=True, foreign_key="news_items.id", unique=True)
@@ -23,6 +24,7 @@ class AnalysisResult(SQLModel, table=True):
 
 
 class AnalysisResultRead(SQLModel):
+    model_config = {"protected_namespaces": ()}
     id: int
     news_id: int
     score: int

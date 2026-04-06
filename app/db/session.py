@@ -1,10 +1,31 @@
 from __future__ import annotations
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+
+from pathlib import Path
+
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
+
 from app.config import get_settings
 
 settings = get_settings()
+
+
+def _ensure_sqlite_directory(database_url: str) -> None:
+    parsed_url = make_url(database_url)
+    if not parsed_url.drivername.startswith("sqlite") or not parsed_url.database:
+        return
+    if parsed_url.database == ":memory:":
+        return
+
+    db_path = Path(parsed_url.database)
+    if not db_path.is_absolute():
+        db_path = Path.cwd() / db_path
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+_ensure_sqlite_directory(settings.database_url)
 
 engine = create_async_engine(
     settings.database_url,

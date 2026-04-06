@@ -1,9 +1,12 @@
 from __future__ import annotations
+
+import httpx
 import pytest
 import respx
-import httpx
-from app.collectors.jin10 import Jin10Collector
+
+from app.collectors.cctv_finance import CCTVFinanceCollector
 from app.collectors.cls import CLSCollector
+from app.collectors.jin10 import Jin10Collector
 
 SAMPLE_RSS = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -39,3 +42,14 @@ async def test_collector_handles_network_error():
             respx.get(url).mock(side_effect=httpx.ConnectError("timeout"))
         items = await collector.fetch()
     assert items == []
+
+
+@pytest.mark.asyncio
+async def test_cctv_finance_fetch_parses_rss():
+    collector = CCTVFinanceCollector()
+    with respx.mock:
+        for url in collector.feed_urls:
+            respx.get(url).mock(return_value=httpx.Response(200, text=SAMPLE_RSS))
+        items = await collector.fetch()
+    assert len(items) == 1
+    assert items[0].source.value == "cctv_finance"

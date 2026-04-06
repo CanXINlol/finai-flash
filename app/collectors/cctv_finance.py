@@ -4,8 +4,8 @@ from app.collectors.base import RSSCollector, build_rsshub_url
 from app.models.news import NewsSource
 
 
-class CLSCollector(RSSCollector):
-    source = NewsSource.CLS
+class CCTVFinanceCollector(RSSCollector):
+    source = NewsSource.CCTV_FINANCE
     feed_urls = [
-        build_rsshub_url("/cls/telegraph"),
+        build_rsshub_url("/cctv/lm/jjbxs"),
     ]

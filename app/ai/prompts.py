@@ -26,7 +26,7 @@ Output the following JSON with ALL fields filled in:
 
 Scoring guide: 1-3 minor, 4-6 sector-moving, 7-8 index-moving, 9-10 black-swan.
 Output ONLY the JSON object.
-""\"
+"""
 
 
 def build_prompt(title, content, pub_time, source, positions=None, language="zh"):

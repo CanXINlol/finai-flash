@@ -1,32 +1,20 @@
-"""
-app/models/__init__.py
-──────────────────────
-Re-export all SQLModel table classes so Alembic's env.py can find them
-with a single import:  from app.models import *
-"""
-
-from app.models.analysis import AnalysisResult, AnalysisResultRead, AnalysisResultSummary, Sentiment
-from app.models.news import NewsItem, NewsItemCreate, NewsItemList, NewsItemRead, compute_fingerprint
-from app.models.portfolio import AlertRule, AlertRuleCreate, AlertRuleRead, Position, PositionCreate, PositionRead, PositionUpdate
+from app.models.alert import AlertLog
+from app.models.analysis import AnalysisResult, AnalysisResultRead
+from app.models.news import FlashItemRead, NewsItem, NewsItemList, NewsItemRead, NewsSource, Sentiment
+from app.models.portfolio import Position, PositionCreate, PositionRead, PositionUpdate
 
 __all__ = [
-    # News
-    "NewsItem",
-    "NewsItemCreate",
-    "NewsItemRead",
-    "NewsItemList",
-    "compute_fingerprint",
-    # Analysis
+    "AlertLog",
     "AnalysisResult",
     "AnalysisResultRead",
-    "AnalysisResultSummary",
-    "Sentiment",
-    # Portfolio
+    "FlashItemRead",
+    "NewsItem",
+    "NewsItemList",
+    "NewsItemRead",
+    "NewsSource",
     "Position",
     "PositionCreate",
     "PositionRead",
     "PositionUpdate",
-    "AlertRule",
-    "AlertRuleCreate",
-    "AlertRuleRead",
+    "Sentiment",
 ]

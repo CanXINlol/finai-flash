@@ -1,15 +1,18 @@
 from __future__ import annotations
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+
 import os
 
-from app.lifespan import lifespan
-from app.api.v1 import news, analysis, portfolio, alerts
-from app.websocket.manager import manager
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 from app.ai.ollama_client import get_ollama_client
+from app.api import flash
+from app.api.v1 import alerts, analysis, news, portfolio
 from app.config import get_settings
+from app.lifespan import lifespan
+from app.websocket.manager import flash_manager, manager
 
 settings = get_settings()
 
@@ -27,15 +30,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── REST API routes ──────────────────────────────────────────────────────
 API_PREFIX = "/api/v1"
-app.include_router(news.router,      prefix=API_PREFIX)
-app.include_router(analysis.router,  prefix=API_PREFIX)
+app.include_router(news.router, prefix=API_PREFIX)
+app.include_router(analysis.router, prefix=API_PREFIX)
 app.include_router(portfolio.router, prefix=API_PREFIX)
-app.include_router(alerts.router,    prefix=API_PREFIX)
+app.include_router(alerts.router, prefix=API_PREFIX)
+app.include_router(flash.router, prefix="/api")
 
 
-# ── Health check ─────────────────────────────────────────────────────────
 @app.get("/health", tags=["system"])
 async def health():
     ollama_ok = await get_ollama_client().health_check()
@@ -44,21 +46,30 @@ async def health():
         "ollama": "connected" if ollama_ok else "unreachable",
         "model": settings.model,
         "ws_clients": manager.active_count,
+        "flash_ws_clients": flash_manager.active_count,
     }
 
 
-# ── WebSocket endpoint ───────────────────────────────────────────────────
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await manager.connect(ws)
     try:
         while True:
-            await ws.receive_text()   # keep-alive ping
+            await ws.receive_text()
     except WebSocketDisconnect:
         await manager.disconnect(ws)
 
 
-# ── Serve Vue frontend (production) ──────────────────────────────────────
+@app.websocket("/ws/flash")
+async def flash_websocket_endpoint(ws: WebSocket):
+    await flash_manager.connect(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        await flash_manager.disconnect(ws)
+
+
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 if os.path.isdir(STATIC_DIR):
     app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
