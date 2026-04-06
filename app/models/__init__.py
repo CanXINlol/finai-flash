@@ -10,6 +10,7 @@ from app.models.news import (
     Sentiment,
 )
 from app.models.portfolio import Position, PositionCreate, PositionRead, PositionUpdate
+from app.models.settings import AppSettings, AppSettingsRead, AppSettingsUpdate, RuntimeSettingsSnapshot
 
 __all__ = [
     "AlertLog",
@@ -25,5 +26,9 @@ __all__ = [
     "PositionCreate",
     "PositionRead",
     "PositionUpdate",
+    "AppSettings",
+    "AppSettingsRead",
+    "AppSettingsUpdate",
+    "RuntimeSettingsSnapshot",
     "Sentiment",
 ]

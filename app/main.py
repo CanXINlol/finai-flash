@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.ai.ollama_client import get_ollama_client
 from app.api import flash
-from app.api.v1 import alerts, analysis, news, portfolio
+from app.api.v1 import alerts, analysis, news, portfolio, settings as settings_api
 from app.config import get_settings
 from app.lifespan import lifespan
 from app.responses import UTF8JSONResponse
+from app.services.settings_service import SettingsService
 from app.websocket.manager import flash_manager, manager
+from app.db.session import get_session
 
 settings = get_settings()
 
@@ -36,17 +38,21 @@ API_PREFIX = "/api/v1"
 app.include_router(news.router, prefix=API_PREFIX)
 app.include_router(analysis.router, prefix=API_PREFIX)
 app.include_router(portfolio.router, prefix=API_PREFIX)
+app.include_router(settings_api.router, prefix=API_PREFIX)
 app.include_router(alerts.router, prefix=API_PREFIX)
 app.include_router(flash.router, prefix="/api")
 
 
 @app.get("/health", tags=["system"])
-async def health():
+async def health(session=Depends(get_session)):
+    runtime_settings = await SettingsService(session).get_public_settings()
     ollama_ok = await get_ollama_client().health_check()
     return {
         "status": "ok",
         "ollama": "connected" if ollama_ok else "unreachable",
-        "model": settings.model,
+        "model": runtime_settings.model,
+        "auto_analyze_flash": runtime_settings.auto_analyze_flash,
+        "collect_interval_seconds": runtime_settings.collect_interval_seconds,
         "ws_clients": manager.active_count,
         "flash_ws_clients": flash_manager.active_count,
     }

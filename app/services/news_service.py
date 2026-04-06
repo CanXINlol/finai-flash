@@ -8,6 +8,7 @@ from app.db.crud import analysis as analysis_crud
 from app.db.crud import news as news_crud
 from app.models.news import FlashAnalysisSummaryRead, FlashItemRead, NewsItem
 from app.services.auto_analysis import schedule_auto_analysis
+from app.services.settings_service import SettingsService
 from app.websocket.events import flash_event, news_event
 from app.websocket.manager import flash_manager, manager
 
@@ -40,7 +41,8 @@ class NewsService:
         item = await news_crud.create(self.session, item)
         await manager.broadcast(news_event(item))
         await flash_manager.broadcast(flash_event(item))
-        if settings.auto_analyze_flash:
+        runtime = await SettingsService(self.session).get_snapshot()
+        if runtime.auto_analyze_flash:
             schedule_auto_analysis(item.id)
         return item
 

@@ -6,11 +6,19 @@ from app.models.news import NewsItem, NewsSource
 
 @pytest.mark.asyncio
 async def test_health_endpoint(client):
-    from unittest.mock import patch, AsyncMock
-    with patch("app.main.get_ollama_client") as mock_get:
+    from unittest.mock import AsyncMock, Mock, patch
+    with patch("app.main.get_ollama_client") as mock_get, patch(
+        "app.services.settings_service.get_flash_analyzer"
+    ) as mock_get_analyzer:
         mock_client = AsyncMock()
         mock_client.health_check = AsyncMock(return_value=True)
         mock_get.return_value = mock_client
+        mock_analyzer = Mock()
+        mock_analyzer.health_check = AsyncMock(
+            return_value={"ok": True, "available_models": ["qwen2.5:7b"]}
+        )
+        mock_analyzer.switch_model = Mock()
+        mock_get_analyzer.return_value = mock_analyzer
         resp = await client.get("/health")
     assert resp.status_code == 200
     data = resp.json()

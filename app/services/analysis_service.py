@@ -3,15 +3,18 @@ from __future__ import annotations
 import math
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 import app.notifiers.dispatcher as dispatcher
 from app.ai.flash_analyzer import get_flash_analyzer
 from app.db.crud import analysis as analysis_crud
 from app.db.crud import news as news_crud
+from app.models.portfolio import Position
 from app.models.analysis import AnalysisResult
 from app.models.flash_analysis import FlashAnalysis
 from app.models.news import NewsItem, Sentiment
 from app.config import get_settings
+from app.services.settings_service import SettingsService
 from app.websocket.events import analysis_event
 from app.websocket.manager import manager
 
@@ -28,8 +31,11 @@ class AnalysisService:
         if existing:
             return existing
 
-        position_labels = self._position_labels(settings.parsed_positions())
-        selected_model = settings.model
+        runtime = await SettingsService(self.session).get_snapshot()
+        position_labels = await self._load_position_labels()
+        if not position_labels:
+            position_labels = self._position_labels(settings.parsed_positions())
+        selected_model = runtime.model
 
         try:
             parsed, latency_ms, selected_model = await self.analyzer.analyze_with_metadata(
@@ -75,6 +81,15 @@ class AnalysisService:
             if content and content != item.title.strip():
                 parts.append(content)
         return "\n".join(parts)
+
+    async def _load_position_labels(self) -> list[str]:
+        result = await self.session.execute(select(Position).order_by(Position.id.asc()))
+        positions = result.scalars().all()
+        payload = [
+            {"ticker": position.ticker, "name": position.name, "quantity": position.quantity}
+            for position in positions
+        ]
+        return self._position_labels(payload)
 
     @staticmethod
     def _position_labels(positions: list[dict] | None) -> list[str]:
