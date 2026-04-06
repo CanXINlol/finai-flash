@@ -12,6 +12,7 @@ from app.api import flash
 from app.api.v1 import alerts, analysis, news, portfolio
 from app.config import get_settings
 from app.lifespan import lifespan
+from app.responses import UTF8JSONResponse
 from app.websocket.manager import flash_manager, manager
 
 settings = get_settings()
@@ -21,6 +22,7 @@ app = FastAPI(
     version="0.1.0",
     description="Local AI financial news terminal",
     lifespan=lifespan,
+    default_response_class=UTF8JSONResponse,
 )
 
 app.add_middleware(
