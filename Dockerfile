@@ -1,15 +1,4 @@
-FROM node:20-slim AS frontend-builder
-
-WORKDIR /frontend
-
-COPY frontend/package.json ./package.json
-RUN npm install
-
-COPY frontend/ ./
-RUN npm run build
-
-
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -31,8 +20,6 @@ COPY alembic.ini ./alembic.ini
 COPY pyproject.toml ./pyproject.toml
 COPY .env.example ./.env.example
 COPY README.md ./README.md
-
-COPY --from=frontend-builder /frontend/dist ./static/
 
 RUN mkdir -p /app/data
 
