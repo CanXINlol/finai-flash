@@ -1,0 +1,60 @@
+services:
+  finai-flash:
+    build: .
+    container_name: finai-flash
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8888}:8888"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - MODEL=${MODEL:-qwen2.5:7b}
+      - DATABASE_URL=sqlite+aiosqlite:///./data/finai.db
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN:-}
+      - TG_CHAT_ID=${TG_CHAT_ID:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - ALERT_SCORE_THRESHOLD=${ALERT_SCORE_THRESHOLD:-7}
+      - MY_POSITIONS=${MY_POSITIONS:-}
+      - ANALYSIS_LANGUAGE=${ANALYSIS_LANGUAGE:-zh}
+    volumes:
+      - finai-data:/app/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: finai-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # Uncomment for GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+
+  redis:
+    image: redis:7-alpine
+    container_name: finai-redis
+    restart: unless-stopped
+    profiles: ["full"]
+    ports:
+      - "6379:6379"
+
+volumes:
+  finai-data:
+  ollama-models:
