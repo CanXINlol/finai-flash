@@ -381,7 +381,7 @@ docker compose up -d
 
 ### 📄 License
 
-MIT © 2025 [yourname](https://github.com/yourname)
+MIT © 2025 [CanXINlol](https://github.com/yourname)
 
 ---
 
