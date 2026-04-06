@@ -87,3 +87,40 @@ def test_quality_feedback_helpers():
     retry_feedback = build_retry_feedback(["summary 太空泛", "缺少时间窗口"])
     assert "summary 太空泛" in retry_feedback
     assert "缺少时间窗口" in retry_feedback
+
+
+def test_flash_analyzer_flags_unsupported_price_claims():
+    result = FlashAnalysis.model_validate(
+        {
+            "summary": "消息刺激下原油现价来到82美元附近，短线风险偏上行。",
+            "impact_score": 78,
+            "bullish_bearish": "利多",
+            "affected_assets": ["原油", "能源股"],
+            "trading_suggestion": "若82美元上方站稳可继续做多，观察1-2日，跌回80美元下方则止损。",
+            "historical_reference": "类似2023年4月OPEC+意外减产后油价在数日内快速上行。",
+        }
+    )
+
+    issues = FlashAnalyzer._quality_issues(result, "OPEC+讨论延长减产期限，油价盘中走高。")
+
+    assert any("实时价格" in issue for issue in issues)
+
+
+def test_flash_analyzer_allows_prices_present_in_source_text():
+    result = FlashAnalysis.model_validate(
+        {
+            "summary": "原文提到金价触及2350美元，显示避险买盘推动黄金偏强。",
+            "impact_score": 68,
+            "bullish_bearish": "利多",
+            "affected_assets": ["黄金", "美元指数"],
+            "trading_suggestion": "若2350美元上方确认站稳，可在1-2日内顺势跟随；若重新跌回原文提到的2350美元下方则止损。",
+            "historical_reference": "类似2020年疫情避险阶段，黄金在避险需求推动下持续走强。",
+        }
+    )
+
+    issues = FlashAnalyzer._quality_issues(
+        result,
+        "现货黄金盘中触及2350美元，因避险买盘升温。",
+    )
+
+    assert not any("实时价格" in issue for issue in issues)

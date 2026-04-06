@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -31,6 +32,11 @@ class SettingsService:
                 if row.auto_analyze_flash is not None
                 else self.base_settings.auto_analyze_flash
             ),
+            live_market_quotes=(
+                row.live_market_quotes
+                if row.live_market_quotes is not None
+                else self.base_settings.live_market_quotes
+            ),
             collect_interval_seconds=(
                 row.collect_interval_seconds or self.base_settings.collect_interval_seconds
             ),
@@ -44,6 +50,7 @@ class SettingsService:
         return AppSettingsRead(
             model=snapshot.model,
             auto_analyze_flash=snapshot.auto_analyze_flash,
+            live_market_quotes=snapshot.live_market_quotes,
             collect_interval_seconds=snapshot.collect_interval_seconds,
             available_models=health.get("available_models", []),
             ollama_connected=bool(health.get("ok")),
@@ -66,6 +73,7 @@ class SettingsService:
         return await self.get_public_settings()
 
     async def _get_or_create(self) -> AppSettings:
+        await self._ensure_schema()
         result = await self.session.execute(
             select(AppSettings).where(AppSettings.id == DEFAULT_ID)
         )
@@ -78,3 +86,37 @@ class SettingsService:
         await self.session.commit()
         await self.session.refresh(row)
         return row
+
+    async def _ensure_schema(self) -> None:
+        await self.session.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    id INTEGER PRIMARY KEY,
+                    model TEXT,
+                    auto_analyze_flash BOOLEAN,
+                    live_market_quotes BOOLEAN,
+                    collect_interval_seconds INTEGER,
+                    updated_at DATETIME
+                )
+                """
+            )
+        )
+        pragma = await self.session.execute(text("PRAGMA table_info(app_settings)"))
+        existing_columns = {row[1] for row in pragma.fetchall()}
+        wanted_columns = {
+            "model": "TEXT",
+            "auto_analyze_flash": "BOOLEAN",
+            "live_market_quotes": "BOOLEAN",
+            "collect_interval_seconds": "INTEGER",
+            "updated_at": "DATETIME",
+        }
+        mutated = False
+        for column_name, column_type in wanted_columns.items():
+            if column_name not in existing_columns:
+                await self.session.execute(
+                    text(f"ALTER TABLE app_settings ADD COLUMN {column_name} {column_type}")
+                )
+                mutated = True
+        if mutated:
+            await self.session.commit()

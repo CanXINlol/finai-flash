@@ -14,6 +14,7 @@ from app.models.analysis import AnalysisResult
 from app.models.flash_analysis import FlashAnalysis
 from app.models.news import NewsItem, Sentiment
 from app.config import get_settings
+from app.services.market_data_service import MarketDataService
 from app.services.settings_service import SettingsService
 from app.websocket.events import analysis_event
 from app.websocket.manager import manager
@@ -36,12 +37,19 @@ class AnalysisService:
         if not position_labels:
             position_labels = self._position_labels(settings.parsed_positions())
         selected_model = runtime.model
+        market_context = await MarketDataService(
+            enabled=runtime.live_market_quotes
+        ).build_market_context(
+            self._build_news_text(item),
+            position_labels or None,
+        )
 
         try:
             parsed, latency_ms, selected_model = await self.analyzer.analyze_with_metadata(
                 text=self._build_news_text(item),
                 positions=position_labels or None,
                 model=selected_model,
+                market_context=market_context,
             )
         except Exception as exc:
             print(f"[Analysis] flash analyzer error for news {item.id}: {exc}")

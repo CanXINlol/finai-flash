@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     collect_interval_seconds: int = 300
     max_news_age_hours: int = 24
     auto_analyze_flash: bool = True
+    live_market_quotes: bool = True
 
     alert_score_threshold: int = 7
     analysis_language: str = "zh"

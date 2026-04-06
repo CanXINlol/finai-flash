@@ -8,6 +8,7 @@ from sqlmodel import select
 from app.ai.flash_analyzer import get_flash_analyzer
 from app.models.flash_analysis import FlashAnalysis, FlashAnalyzeRequest
 from app.models.portfolio import Position
+from app.services.market_data_service import MarketDataService
 from app.services.settings_service import SettingsService
 
 
@@ -21,18 +22,28 @@ class FlashAnalysisService:
 
     async def analyze(self, data: FlashAnalyzeRequest) -> FlashAnalysis:
         runtime = await SettingsService(self.session).get_snapshot()
+        positions = data.positions or await self._default_positions()
+        market_context = await MarketDataService(
+            enabled=runtime.live_market_quotes
+        ).build_market_context(data.text, positions)
         return await self.analyzer.analyze(
             text=data.text,
-            positions=data.positions or await self._default_positions(),
+            positions=positions,
             model=data.model or runtime.model,
+            market_context=market_context,
         )
 
     async def stream_json(self, data: FlashAnalyzeRequest) -> AsyncIterator[str]:
         runtime = await SettingsService(self.session).get_snapshot()
+        positions = data.positions or await self._default_positions()
+        market_context = await MarketDataService(
+            enabled=runtime.live_market_quotes
+        ).build_market_context(data.text, positions)
         async for chunk in self.analyzer.stream_json(
             text=data.text,
-            positions=data.positions or await self._default_positions(),
+            positions=positions,
             model=data.model or runtime.model,
+            market_context=market_context,
         ):
             yield chunk
 

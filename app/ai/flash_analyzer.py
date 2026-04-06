@@ -10,6 +10,7 @@ import httpx
 from app.ai.flash_prompts import (
     FLASH_HUMAN_TEMPLATE,
     FLASH_SYSTEM_PROMPT,
+    build_price_guardrails,
     build_positions_text,
     build_retry_feedback,
     default_quality_feedback,
@@ -32,6 +33,9 @@ GENERIC_PHRASES = (
 HORIZON_PATTERN = re.compile(r"(分钟|小时|日内|短线|本周|未来\d+[天日周]|\d+-\d+日|\d+-\d+周|数日|数周|中线)")
 RISK_PATTERN = re.compile(r"(止损|失效|若|如果|风险|跌破|站稳|确认|除非)")
 YEAR_PATTERN = re.compile(r"(19|20)\d{2}")
+MARKET_METRIC_PATTERN = re.compile(
+    r"(?:USD|US\$|\$|¥|￥|人民币)?\s*\d+(?:\.\d+)?\s*(?:万亿美元|亿美元|万亿|美元|美金|元|点|bp|bps|%|％)"
+)
 
 
 class FlashAnalyzer:
@@ -59,12 +63,14 @@ class FlashAnalyzer:
         text: str,
         positions: list[str] | None = None,
         model: str | None = None,
+        market_context: str | None = None,
     ) -> FlashAnalysis:
         selected_model = model or self.default_model
         return await self._analyze_with_quality_retry(
             text=text,
             positions=positions,
             selected_model=selected_model,
+            market_context=market_context,
         )
 
     async def stream_json(
@@ -72,11 +78,14 @@ class FlashAnalyzer:
         text: str,
         positions: list[str] | None = None,
         model: str | None = None,
+        market_context: str | None = None,
     ) -> AsyncIterator[str]:
         selected_model = model or self.default_model
         chain = self._build_chain(selected_model)
         try:
-            async for chunk in chain.astream(self._build_payload(text, positions, default_quality_feedback())):
+            async for chunk in chain.astream(
+                self._build_payload(text, positions, default_quality_feedback(), market_context)
+            ):
                 chunk_text = self._content_to_text(chunk)
                 if chunk_text:
                     yield chunk_text
@@ -88,6 +97,7 @@ class FlashAnalyzer:
         text: str,
         positions: list[str] | None = None,
         model: str | None = None,
+        market_context: str | None = None,
     ) -> tuple[FlashAnalysis, int, str]:
         selected_model = model or self.default_model
         started_at = time.monotonic()
@@ -95,6 +105,7 @@ class FlashAnalyzer:
             text=text,
             positions=positions,
             selected_model=selected_model,
+            market_context=market_context,
         )
         latency_ms = int((time.monotonic() - started_at) * 1000)
         return result, latency_ms, selected_model
@@ -104,6 +115,7 @@ class FlashAnalyzer:
         text: str,
         positions: list[str] | None,
         selected_model: str,
+        market_context: str | None,
     ) -> FlashAnalysis:
         quality_feedback = default_quality_feedback()
         last_exception: Exception | None = None
@@ -111,7 +123,9 @@ class FlashAnalyzer:
         for attempt in range(self.quality_retries + 1):
             chain = self._build_chain(selected_model)
             try:
-                response = await chain.ainvoke(self._build_payload(text, positions, quality_feedback))
+                response = await chain.ainvoke(
+                    self._build_payload(text, positions, quality_feedback, market_context)
+                )
             except Exception as exc:
                 if attempt < self.quality_retries:
                     quality_feedback = build_retry_feedback(
@@ -135,7 +149,7 @@ class FlashAnalyzer:
                     f"Model `{selected_model}` returned invalid JSON. Original error: {exc}"
                 ) from exc
 
-            issues = self._quality_issues(parsed)
+            issues = self._quality_issues(parsed, text)
             if not issues:
                 return parsed
 
@@ -221,10 +235,17 @@ class FlashAnalyzer:
         return prompt | llm
 
     @staticmethod
-    def _build_payload(text: str, positions: list[str] | None, quality_feedback: str) -> dict[str, str]:
+    def _build_payload(
+        text: str,
+        positions: list[str] | None,
+        quality_feedback: str,
+        market_context: str | None,
+    ) -> dict[str, str]:
         return {
             "text": text.strip(),
             "positions_text": build_positions_text(positions),
+            "pricing_guardrails": build_price_guardrails(text),
+            "market_context": (market_context or "本次没有拿到额外实时行情，请不要自行补充现价。").strip(),
             "quality_feedback": quality_feedback.strip(),
         }
 
@@ -304,7 +325,7 @@ class FlashAnalyzer:
         return message[:240]
 
     @staticmethod
-    def _quality_issues(result: FlashAnalysis) -> list[str]:
+    def _quality_issues(result: FlashAnalysis, source_text: str = "") -> list[str]:
         issues: list[str] = []
         summary = result.summary.strip()
         suggestion = result.trading_suggestion.strip()
@@ -322,11 +343,26 @@ class FlashAnalyzer:
             issues.append("trading_suggestion 缺少风险提示或失效条件。")
         if "建议关注" in suggestion and "若" not in suggestion and "如果" not in suggestion:
             issues.append("trading_suggestion 过于泛泛，没有给出执行条件。")
+        if FlashAnalyzer._has_unsupported_price_claim(summary, suggestion, source_text):
+            issues.append("summary 或 trading_suggestion 引用了原文未提供的实时价格、点位或涨跌幅。")
         if not YEAR_PATTERN.search(historical):
             issues.append("historical_reference 缺少具体年份。")
         if len(historical) < 12:
             issues.append("historical_reference 过短，没有说明历史事件和市场反应。")
         return issues
+
+    @staticmethod
+    def _has_unsupported_price_claim(summary: str, suggestion: str, source_text: str) -> bool:
+        output_metrics = FlashAnalyzer._extract_market_metrics(f"{summary}\n{suggestion}")
+        if not output_metrics:
+            return False
+        source_metrics = set(FlashAnalyzer._extract_market_metrics(source_text))
+        return any(metric not in source_metrics for metric in output_metrics)
+
+    @staticmethod
+    def _extract_market_metrics(text: str) -> list[str]:
+        normalized = str(text or "").replace(",", "").replace("，", "").replace("％", "%")
+        return [" ".join(match.split()) for match in MARKET_METRIC_PATTERN.findall(normalized)]
 
 
 _flash_analyzer: FlashAnalyzer | None = None

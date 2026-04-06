@@ -52,6 +52,7 @@ async def health(session=Depends(get_session)):
         "ollama": "connected" if ollama_ok else "unreachable",
         "model": runtime_settings.model,
         "auto_analyze_flash": runtime_settings.auto_analyze_flash,
+        "live_market_quotes": runtime_settings.live_market_quotes,
         "collect_interval_seconds": runtime_settings.collect_interval_seconds,
         "ws_clients": manager.active_count,
         "flash_ws_clients": flash_manager.active_count,

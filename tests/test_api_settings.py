@@ -29,6 +29,7 @@ async def test_settings_api_returns_defaults(client):
     data = response.json()
     assert data["model"] == "qwen2.5:7b"
     assert data["auto_analyze_flash"] is True
+    assert data["live_market_quotes"] is True
     assert data["collect_interval_seconds"] == 300
     assert data["available_models"] == ["qwen2.5:7b", "qwen2.5:14b"]
 
@@ -44,6 +45,7 @@ async def test_settings_api_persists_updates(client):
             json={
                 "model": "deepseek-r1:14b",
                 "auto_analyze_flash": False,
+                "live_market_quotes": False,
                 "collect_interval_seconds": 15,
             },
         )
@@ -53,9 +55,11 @@ async def test_settings_api_persists_updates(client):
     updated = update_response.json()
     assert updated["model"] == "deepseek-r1:14b"
     assert updated["auto_analyze_flash"] is False
+    assert updated["live_market_quotes"] is False
     assert updated["collect_interval_seconds"] == 15
 
     reread = read_response.json()
     assert reread["model"] == "deepseek-r1:14b"
     assert reread["auto_analyze_flash"] is False
+    assert reread["live_market_quotes"] is False
     assert reread["collect_interval_seconds"] == 15
