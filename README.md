@@ -17,7 +17,7 @@
 ---
 
 ### 本地运行的「AI信息分析终端」——完全自托管，零 API 费用，零隐私泄露，秒级市场分析。
-### *Your self-hosted AI financial terminal — real-time news, local LLM analysis, zero cloud dependency.*
+### *Your self-hosted AI information analysis terminal — real-time news, local LLM analysis, zero cloud dependency.*
 
 </div>
 
