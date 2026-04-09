@@ -114,14 +114,14 @@ docker compose up -d
 # .env 示例
 MY_POSITIONS=600519.SH:茅台:100股, 00700.HK:腾讯:200股, TSLA:特斯拉:50股
 ALERT_SCORE_THRESHOLD=7        # 市场影响分 ≥7 才推送通知
-MODEL=qwen2.5:7b               # 或 deepseek-r1:8b / llama3.1:8b
+MODEL=qwen3.5:9b               # 或 deepseek-r1:8b / llama3.1:8b
 ```
 
 #### 第二步：选择你的本地模型
 
 ```bash
 # 推荐组合（按性能/速度平衡排序）
-ollama pull qwen2.5:7b          # 🥇 中文最优，速度快，推荐首选
+ollama pull qwen3.5:9b          # 🥇 中文最优，速度快，推荐首选
 ollama pull deepseek-r1:8b      # 🥈 推理强，适合复杂宏观分析
 ollama pull llama3.1:8b         # 🥉 英文财经新闻分析佳
 ```
@@ -139,7 +139,7 @@ docker compose up -d
 ⚡ finai-flash v0.1.0 已启动
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📡 数据源: 金十数据 ✓  财联社 ✓  Reuters ✓
-🧠 模型:   qwen2.5:7b @ localhost:11434
+🧠 模型:   qwen3.5:9b @ localhost:11434
 💼 持仓:   茅台 · 腾讯 · 特斯拉 (3只)
 🔔 推送:   Telegram ✓
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
