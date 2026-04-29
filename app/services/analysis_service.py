@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import math
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,12 @@ from app.websocket.manager import manager
 
 settings = get_settings()
 
+QUOTE_TIMEOUT_SECONDS = 6
+QUOTE_TIMEOUT_CONTEXT = (
+    "实时行情查询超时。本次分析只能使用快讯原文和用户持仓；"
+    "不得自行编造任何最新价格、点位或涨跌幅。"
+)
+
 
 class AnalysisService:
     def __init__(self, session: AsyncSession):
@@ -37,11 +44,10 @@ class AnalysisService:
         if not position_labels:
             position_labels = self._position_labels(settings.parsed_positions())
         selected_model = runtime.model
-        market_context = await MarketDataService(
-            enabled=runtime.live_market_quotes
-        ).build_market_context(
+        market_context = await self._build_market_context(
             self._build_news_text(item),
             position_labels or None,
+            runtime.live_market_quotes,
         )
 
         try:
@@ -89,6 +95,20 @@ class AnalysisService:
             if content and content != item.title.strip():
                 parts.append(content)
         return "\n".join(parts)
+
+    async def _build_market_context(
+        self,
+        text: str,
+        positions: list[str] | None,
+        enabled: bool,
+    ) -> str:
+        try:
+            return await asyncio.wait_for(
+                MarketDataService(enabled=enabled).build_market_context(text, positions),
+                timeout=QUOTE_TIMEOUT_SECONDS,
+            )
+        except TimeoutError:
+            return QUOTE_TIMEOUT_CONTEXT
 
     async def _load_position_labels(self) -> list[str]:
         result = await self.session.execute(select(Position).order_by(Position.id.asc()))

@@ -8,16 +8,18 @@ from app.services.analysis_service import AnalysisService
 
 _pending_news_ids: set[int] = set()
 _background_tasks: set[asyncio.Task] = set()
+_analysis_semaphore = asyncio.Semaphore(1)
 
 
 async def _run_analysis(news_id: int) -> None:
     try:
-        async with AsyncSessionLocal() as session:
-            item = await news_crud.get_by_id(session, news_id)
-            if not item:
-                return
-            service = AnalysisService(session)
-            await service.analyze_news(item)
+        async with _analysis_semaphore:
+            async with AsyncSessionLocal() as session:
+                item = await news_crud.get_by_id(session, news_id)
+                if not item:
+                    return
+                service = AnalysisService(session)
+                await service.analyze_news(item)
     except Exception as exc:
         print(f"[AutoAnalysis] error for news {news_id}: {exc}")
     finally:

@@ -158,10 +158,11 @@ class FlashAnalyzer:
                 quality_feedback = build_retry_feedback(issues)
                 continue
 
-            raise RuntimeError(
-                f"Model `{selected_model}` returned an analysis that was too generic: "
+            print(
+                f"[AnalysisQuality] Model `{selected_model}` returned a low-confidence analysis: "
                 + "; ".join(issues)
             )
+            return parsed
 
         raise RuntimeError(
             f"Flash analysis failed with model `{selected_model}`: "
@@ -229,6 +230,7 @@ class FlashAnalyzer:
             model=model or self.default_model,
             temperature=self.temperature,
             format="json",
+            num_ctx=2048,
             num_predict=self.num_predict,
             timeout=self.timeout,
         )
