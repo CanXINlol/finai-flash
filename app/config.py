@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     ollama_temperature: float = 0.05
     rsshub_base_url: str = "http://localhost:1200"
 
-    collect_interval_seconds: int = 300
+    collect_interval_seconds: int = 5
     max_news_age_hours: int = 24
     auto_analyze_flash: bool = True
     auto_analysis_max_pending: int = 3

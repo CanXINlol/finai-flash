@@ -9,7 +9,7 @@ These defaults are tuned for a practical MVP on a Windows machine with about 16 
 | Setting | Recommended | Why |
 | --- | --- | --- |
 | `MODEL` | `qwen2.5:7b` | Good Chinese JSON reliability, fits local machines better than 14B/32B. |
-| `COLLECT_INTERVAL_SECONDS` | `300` | Matches the product goal of near-real-time RSS without overloading SQLite or Ollama. |
+| `COLLECT_INTERVAL_SECONDS` | `5` | Matches the product goal of near-real-time RSS without overloading SQLite or Ollama. |
 | `AUTO_ANALYZE_FLASH` | `true` | Keeps the dashboard useful automatically. |
 | `AUTO_ANALYSIS_MAX_PENDING` | `3` | Prevents slow local inference from creating an infinite backlog. |
 | `LIVE_MARKET_QUOTES` | `true` | Lets analysis identify related market assets. |

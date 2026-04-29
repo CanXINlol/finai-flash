@@ -392,7 +392,7 @@
             <div class="two">
               <div>
                 <label for="settings-interval">轮询间隔（秒）</label>
-                <input id="settings-interval" class="field" type="number" min="60" max="3600" step="30" />
+                <input id="settings-interval" class="field" type="number" min="5" max="3600" step="5" />
               </div>
               <div>
                 <label>自动分析</label>
@@ -403,7 +403,7 @@
               <label>实时行情查询</label>
               <div class="row box"><span id="settings-live-text">开启</span><input id="settings-live" class="toggle" type="checkbox" /></div>
             </div>
-            <div id="settings-msg" class="notice">推荐：qwen2.5:7b、300 秒轮询、实时行情开启、后台分析最多排队 3 条。</div>
+            <div id="settings-msg" class="notice">推荐：qwen2.5:7b、5 秒轮询、实时行情开启、后台分析最多排队 3 条。</div>
           </div>
         </div>
 
@@ -519,7 +519,7 @@
       try {
         const data = await fetch("/api/v1/settings").then((r) => r.json());
         $("settings-model").value = data.model || "";
-        $("settings-interval").value = data.collect_interval_seconds || 300;
+        $("settings-interval").value = data.collect_interval_seconds || 5;
         $("settings-auto").checked = Boolean(data.auto_analyze_flash);
         $("settings-live").checked = Boolean(data.live_market_quotes);
         $("settings-auto-text").textContent = data.auto_analyze_flash ? "开启" : "关闭";
@@ -535,7 +535,7 @@
     async function saveSettings() {
       const payload = {
         model: $("settings-model").value.trim(),
-        collect_interval_seconds: Number($("settings-interval").value || 300),
+        collect_interval_seconds: Number($("settings-interval").value || 5),
         auto_analyze_flash: $("settings-auto").checked,
         live_market_quotes: $("settings-live").checked,
       };

@@ -30,7 +30,7 @@ async def test_settings_api_returns_defaults(client):
     assert data["model"] == "qwen2.5:7b"
     assert data["auto_analyze_flash"] is True
     assert data["live_market_quotes"] is True
-    assert data["collect_interval_seconds"] == 300
+    assert data["collect_interval_seconds"] == 5
     assert data["available_models"] == ["qwen2.5:7b", "qwen2.5:14b"]
 
 
