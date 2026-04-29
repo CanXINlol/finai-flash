@@ -5,146 +5,673 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FinAI-Flash</title>
   <style>
-    :root{--bg:#071019;--bg2:#0c1625;--panel:rgba(10,20,34,.92);--line:rgba(143,174,216,.16);--text:#eef6ff;--muted:#91a8c4;--soft:#c5d6e9;--cyan:#4ad7ff;--teal:#34d0a5;--bull:#3ad47d;--bear:#ff7a7a;--neutral:#f0ca74;--r:20px}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;color:var(--text);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 0 0,rgba(74,215,255,.14),transparent 26%),radial-gradient(circle at 100% 0,rgba(52,208,165,.11),transparent 22%),linear-gradient(180deg,var(--bg) 0,var(--bg2) 100%)}
-    .shell{max-width:1440px;margin:0 auto;padding:24px 16px 36px}.panel{background:linear-gradient(180deg,rgba(14,27,44,.96),rgba(8,16,28,.95));border:1px solid var(--line);border-radius:24px;padding:20px}
-    .hero,.workspace,.two{display:grid;gap:16px}.hero{grid-template-columns:1.35fr .95fr;margin-bottom:16px}.workspace{grid-template-columns:360px minmax(0,1fr)}.sidebar{display:grid;gap:16px;align-self:start;position:sticky;top:16px}.two{grid-template-columns:1fr 1fr}
-    h1{margin:12px 0 10px;font-size:clamp(34px,4.8vw,56px);line-height:1;letter-spacing:-.05em}.sub,.muted{color:var(--muted);line-height:1.7}.sub{max-width:760px}.muted{font-size:13px}
-    .kicker,.tag,.asset,.chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:12px}.kicker{background:rgba(74,215,255,.08);color:#bdefff}.dot{width:8px;height:8px;border-radius:50%;background:var(--teal)}
-    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}.card,.feed-card,.box{border:1px solid var(--line);border-radius:var(--r);background:rgba(255,255,255,.03)}.card,.box{padding:14px}.stat label,.label{display:block;margin-bottom:8px;color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase}.stat strong{display:block;font-size:24px}
-    .search,.field,textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);outline:0;font:inherit}textarea{min-height:80px;resize:vertical}
-    .chips,.meta,.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.row{justify-content:space-between}.chip{cursor:pointer}.chip.active,.btn{background:linear-gradient(135deg,var(--cyan),var(--teal));border-color:transparent;color:#08111a;font-weight:700}.btn{cursor:pointer;border:0;border-radius:999px;padding:10px 16px;font-size:13px}.btn.secondary{background:rgba(255,255,255,.05);color:var(--soft);border:1px solid var(--line)}
-    .toggle-wrap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.025)}.toggle{appearance:none;width:50px;height:28px;border-radius:999px;background:rgba(255,255,255,.12);position:relative;cursor:pointer}.toggle:after{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .18s}.toggle:checked{background:linear-gradient(135deg,var(--cyan),var(--teal))}.toggle:checked:after{transform:translateX(22px)}
-    .notice{padding:12px 14px;border-radius:14px;border:1px solid rgba(74,215,255,.18);background:rgba(74,215,255,.08);color:#c7eeff;font-size:13px;line-height:1.6}.notice.error{border-color:rgba(255,122,122,.2);background:rgba(255,122,122,.08);color:#ffd1d1}
-    .feed-top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px}.feed-top h2,.title2{margin:0 0 6px;font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}.feed-list,.list{display:grid;gap:12px}
-    .feed-card{display:grid;grid-template-columns:108px minmax(0,1fr);gap:14px;padding:18px}.timeline{border-right:1px solid rgba(143,174,216,.12);padding-right:12px}.clock{font-size:30px;font-weight:800}.date{margin-top:8px;color:var(--muted);font-size:12px}.title{margin:0 0 10px;font-size:20px;line-height:1.5}.title a{color:inherit;text-decoration:none}.content,.box p{margin:0;color:var(--soft);line-height:1.75}
-    .bullish{color:var(--bull)}.bearish{color:var(--bear)}.neutral{color:var(--neutral)}.score{background:linear-gradient(135deg,var(--cyan),var(--teal));border-color:transparent;color:#08111a;font-weight:700}.asset{color:#c0eeff;border-color:rgba(74,215,255,.18);background:rgba(74,215,255,.08)}
-    .position{padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.025)}.position h4{margin:0 0 6px;font-size:15px}.empty{text-align:center;color:var(--muted);padding:36px 18px;border:1px dashed rgba(143,174,216,.22);border-radius:18px}
-    @media (max-width:1220px){.hero,.workspace{grid-template-columns:1fr}.sidebar{position:static}}@media (max-width:760px){.stats,.two,.feed-card{grid-template-columns:1fr}.timeline{border-right:0;border-bottom:1px solid rgba(143,174,216,.12);padding-right:0;padding-bottom:12px}.feed-top{flex-direction:column;align-items:flex-start}}
+    :root {
+      --bg: #071017;
+      --panel: rgba(10, 20, 32, 0.9);
+      --panel-2: rgba(18, 32, 48, 0.72);
+      --line: rgba(146, 184, 216, 0.18);
+      --text: #eef7ff;
+      --muted: #91a7bd;
+      --cyan: #48d8ff;
+      --mint: #39d39f;
+      --amber: #f5c45f;
+      --red: #ff7777;
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(72, 216, 255, 0.18), transparent 30%),
+        radial-gradient(circle at 95% 5%, rgba(57, 211, 159, 0.14), transparent 28%),
+        linear-gradient(180deg, #061018 0%, #0a1421 60%, #08111b 100%);
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    .shell {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    .hero, .grid, .two {
+      display: grid;
+      gap: 16px;
+    }
+
+    .hero {
+      grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.8fr);
+      margin-bottom: 16px;
+    }
+
+    .grid {
+      grid-template-columns: 390px minmax(0, 1fr);
+    }
+
+    .two {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(13, 26, 42, 0.94), rgba(8, 17, 28, 0.94));
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.22);
+      padding: 20px;
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 16px;
+      align-self: start;
+      position: sticky;
+      top: 16px;
+    }
+
+    .kicker, .tag, .asset {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 12px;
+      color: #ccefff;
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 18px var(--mint);
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(34px, 5vw, 62px);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+    }
+
+    h2, h3, p {
+      margin-top: 0;
+    }
+
+    .sub, .muted, .content {
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .title {
+      margin: 0 0 12px;
+      font-size: 15px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #c6d9ea;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .stat, .box, .flash {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel-2);
+      padding: 14px;
+    }
+
+    .stat label, label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      color: var(--text);
+    }
+
+    .field, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      outline: 0;
+      padding: 12px 13px;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      color: #061018;
+      background: linear-gradient(135deg, var(--cyan), var(--mint));
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn.secondary {
+      color: #d7e8f6;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .btn:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .toggle {
+      appearance: none;
+      width: 48px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      position: relative;
+      cursor: pointer;
+    }
+
+    .toggle:after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: white;
+      transition: transform 0.18s ease;
+    }
+
+    .toggle:checked {
+      background: linear-gradient(135deg, var(--cyan), var(--mint));
+    }
+
+    .toggle:checked:after {
+      transform: translateX(20px);
+    }
+
+    .notice {
+      border: 1px solid rgba(72, 216, 255, 0.24);
+      border-radius: 14px;
+      background: rgba(72, 216, 255, 0.08);
+      color: #caefff;
+      padding: 12px 14px;
+      line-height: 1.65;
+      font-size: 13px;
+    }
+
+    .notice.error {
+      border-color: rgba(255, 119, 119, 0.28);
+      background: rgba(255, 119, 119, 0.08);
+      color: #ffd4d4;
+    }
+
+    .flash {
+      display: grid;
+      grid-template-columns: 104px minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .time {
+      border-right: 1px solid var(--line);
+      padding-right: 12px;
+    }
+
+    .clock {
+      font-size: 28px;
+      font-weight: 900;
+    }
+
+    .headline {
+      margin: 0 0 10px;
+      font-size: 20px;
+      line-height: 1.45;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .bullish { color: var(--mint); }
+    .bearish { color: var(--red); }
+    .neutral { color: var(--amber); }
+    .score {
+      color: #061018;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--cyan), var(--mint));
+      font-weight: 900;
+    }
+
+    .asset {
+      border-color: rgba(72, 216, 255, 0.22);
+      background: rgba(72, 216, 255, 0.08);
+    }
+
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .empty {
+      border: 1px dashed rgba(146, 184, 216, 0.26);
+      border-radius: 18px;
+      padding: 32px 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #d8edf9;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1180px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+    }
+
+    @media (max-width: 760px) {
+      .stats, .two, .flash { grid-template-columns: 1fr; }
+      .time { border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 12px; }
+    }
   </style>
 </head>
 <body>
   <div class="shell">
     <section class="hero">
       <div class="panel">
-        <div class="kicker"><span class="dot"></span> Local Flash Radar</div>
-        <h1>把快讯、模型和持仓放在同一个交易面板里。</h1>
-        <p class="sub">现在你可以直接在首页配置默认模型、轮询频率、自动分析开关，并维护持仓列表。后续新的快讯会自动读取这些设置来做分析。</p>
+        <div class="kicker"><span class="dot"></span> Local AI Financial Radar</div>
+        <h1>实时快讯，本地 AI 秒级解读。</h1>
+        <p class="sub">FinAI-Flash 把 RSS 快讯、Ollama 本地模型、用户持仓和实时行情放在同一个交易员工作台里。默认参数已按本机 16G 内存/8G 显存场景调成稳定优先。</p>
         <div class="stats">
-          <div class="card stat"><label>系统状态</label><strong id="status-app">检查中</strong><span>FastAPI / Scheduler / DB</span></div>
-          <div class="card stat"><label>当前模型</label><strong id="stat-model">-</strong><span id="status-ollama">等待检查</span></div>
-          <div class="card stat"><label>可见快讯</label><strong id="stat-count">0</strong><span id="meta-count">等待数据</span></div>
-          <div class="card stat"><label>已分析</label><strong id="stat-analyzed">0</strong><span id="stat-connections">0 / 0</span></div>
+          <div class="stat"><label>系统状态</label><strong id="status-app">检查中</strong><span class="muted">FastAPI / DB</span></div>
+          <div class="stat"><label>当前模型</label><strong id="status-model">-</strong><span id="status-ollama" class="muted">等待检查</span></div>
+          <div class="stat"><label>快讯数量</label><strong id="status-flash">0</strong><span class="muted">最近 10 条</span></div>
+          <div class="stat"><label>WebSocket</label><strong id="status-ws">0</strong><span class="muted">实时连接</span></div>
         </div>
       </div>
       <div class="panel">
-        <div class="title2">Top Signal</div>
-        <div id="top-signal"></div>
+        <div class="title">Manual Analyzer</div>
+        <textarea id="manual-text" placeholder="粘贴一条快讯，例如：OPEC+据称正在讨论延长自愿减产期限，国际油价盘中快速走高。"></textarea>
+        <div style="height:10px"></div>
+        <input id="manual-positions" class="field" placeholder="可选持仓，用逗号分隔：原油多单, 黄金" />
+        <div style="height:12px"></div>
+        <div class="row">
+          <span class="muted">用于快速验证 AI 分析，不写入数据库。</span>
+          <button id="manual-run" class="btn">分析这条快讯</button>
+        </div>
+        <div style="height:12px"></div>
+        <div id="manual-result" class="notice">等待输入快讯。</div>
       </div>
     </section>
 
-    <section class="workspace">
+    <section class="grid">
       <aside class="sidebar">
         <div class="panel">
-          <div class="title2">过滤器</div>
-          <input id="search-input" class="search" type="search" placeholder="搜索标题、正文、建议..." />
-          <div style="height:12px"></div>
-          <label class="label">来源</label>
-          <div id="source-filters" class="chips"></div>
-          <div style="height:12px"></div>
-          <label class="label">情绪</label>
-          <div id="sentiment-filters" class="chips"></div>
-          <div style="height:12px"></div>
-          <div class="toggle-wrap"><span>只看已分析</span><input id="toggle-analyzed" class="toggle" type="checkbox" /></div>
-          <div style="height:12px"></div>
-          <div id="status-refresh" class="notice">最后刷新：等待中</div>
-        </div>
-
-        <div class="panel">
-          <div class="row"><div class="title2">运行设置</div><button id="save-settings-btn" class="btn" type="button">保存设置</button></div>
+          <div class="row">
+            <div class="title">Runtime Settings</div>
+            <button id="save-settings" class="btn">保存</button>
+          </div>
           <div class="list">
             <div>
-              <label class="label" for="settings-model">默认模型</label>
-              <input id="settings-model" class="field" list="available-models" placeholder="例如 qwen2.5:7b" />
-              <datalist id="available-models"></datalist>
+              <label for="settings-model">默认模型</label>
+              <input id="settings-model" class="field" list="model-options" />
+              <datalist id="model-options"></datalist>
             </div>
             <div class="two">
               <div>
-                <label class="label" for="settings-interval">轮询间隔（秒）</label>
-                <input id="settings-interval" class="field" type="number" min="5" max="3600" step="1" />
+                <label for="settings-interval">轮询间隔（秒）</label>
+                <input id="settings-interval" class="field" type="number" min="60" max="3600" step="30" />
               </div>
               <div>
-                <label class="label">自动分析</label>
-                <div class="toggle-wrap"><span id="settings-auto-text">开启</span><input id="settings-auto" class="toggle" type="checkbox" /></div>
+                <label>自动分析</label>
+                <div class="row box"><span id="settings-auto-text">开启</span><input id="settings-auto" class="toggle" type="checkbox" /></div>
               </div>
             </div>
             <div>
-              <label class="label">实时行情查询</label>
-              <div class="toggle-wrap"><span id="settings-live-text">开启</span><input id="settings-live" class="toggle" type="checkbox" /></div>
+              <label>实时行情查询</label>
+              <div class="row box"><span id="settings-live-text">开启</span><input id="settings-live" class="toggle" type="checkbox" /></div>
             </div>
-            <div id="settings-message" class="notice">保存后会立刻影响新的快讯轮询和 AI 分析。</div>
+            <div id="settings-msg" class="notice">推荐：qwen2.5:7b、300 秒轮询、实时行情开启、后台分析最多排队 3 条。</div>
           </div>
         </div>
 
         <div class="panel">
-          <div class="row"><div class="title2">持仓管理</div><button id="reload-portfolio-btn" class="btn secondary" type="button">刷新</button></div>
+          <div class="row">
+            <div class="title">Portfolio</div>
+            <button id="reload-portfolio" class="btn secondary">刷新</button>
+          </div>
           <div class="list">
             <div class="two">
-              <div><label class="label" for="position-ticker">代码</label><input id="position-ticker" class="field" placeholder="CL / XAUUSD / BTC" /></div>
-              <div><label class="label" for="position-name">名称</label><input id="position-name" class="field" placeholder="原油多单 / 黄金" /></div>
+              <input id="position-ticker" class="field" placeholder="代码：CL / XAUUSD / BTC" />
+              <input id="position-name" class="field" placeholder="名称：原油多单 / 黄金" />
             </div>
             <div class="two">
-              <div><label class="label" for="position-quantity">数量</label><input id="position-quantity" class="field" type="number" step="0.01" placeholder="1" /></div>
-              <div><label class="label" for="position-market">市场</label><input id="position-market" class="field" placeholder="Futures / Gold / Crypto" /></div>
+              <input id="position-quantity" class="field" type="number" step="0.01" placeholder="数量" />
+              <input id="position-market" class="field" placeholder="市场：Futures / Gold / Crypto" />
             </div>
-            <div class="row"><span class="muted">新的 AI 分析会优先读取这里的持仓。</span><button id="add-position-btn" class="btn" type="button">新增持仓</button></div>
-            <div id="portfolio-message" class="notice">持仓为空时，AI 会按通用市场模式分析。</div>
+            <button id="add-position" class="btn">新增持仓</button>
+            <div id="portfolio-msg" class="notice">持仓会用于后续 AI 分析。</div>
             <div id="portfolio-list" class="list"></div>
           </div>
         </div>
       </aside>
 
       <main class="panel">
-        <div class="feed-top">
-          <div><h2>Flash Tape</h2><p id="meta-summary" class="muted">尚未收到快讯</p></div>
-          <div class="row"><button id="reload-btn" class="btn secondary" type="button">刷新列表</button><button id="recheck-btn" class="btn" type="button">刷新状态</button></div>
+        <div class="row">
+          <div>
+            <div class="title">Flash Tape</div>
+            <p id="flash-summary" class="muted">正在加载最新快讯。</p>
+          </div>
+          <button id="reload-flash" class="btn secondary">刷新快讯</button>
         </div>
-        <section id="feed-list" class="feed-list"></section>
+        <div id="flash-list" class="list"></div>
       </main>
     </section>
   </div>
 
   <script>
-    const sourceOptions=[{value:"all",label:"全部来源"},{value:"jin10",label:"金十"},{value:"cls",label:"财联社"},{value:"cctv_finance",label:"央视财经"}];
-    const sentimentOptions=[{value:"all",label:"全部情绪"},{value:"bullish",label:"利多"},{value:"bearish",label:"利空"},{value:"neutral",label:"中性"},{value:"pending",label:"待分析"}];
-    const elements={feedList:document.getElementById("feed-list"),searchInput:document.getElementById("search-input"),sourceFilters:document.getElementById("source-filters"),sentimentFilters:document.getElementById("sentiment-filters"),toggleAnalyzed:document.getElementById("toggle-analyzed"),reloadBtn:document.getElementById("reload-btn"),recheckBtn:document.getElementById("recheck-btn"),statusApp:document.getElementById("status-app"),statModel:document.getElementById("stat-model"),statusOllama:document.getElementById("status-ollama"),statCount:document.getElementById("stat-count"),statAnalyzed:document.getElementById("stat-analyzed"),metaCount:document.getElementById("meta-count"),metaSummary:document.getElementById("meta-summary"),statConnections:document.getElementById("stat-connections"),topSignal:document.getElementById("top-signal"),statusRefresh:document.getElementById("status-refresh"),settingsModel:document.getElementById("settings-model"),settingsModels:document.getElementById("available-models"),settingsInterval:document.getElementById("settings-interval"),settingsAuto:document.getElementById("settings-auto"),settingsAutoText:document.getElementById("settings-auto-text"),settingsLive:document.getElementById("settings-live"),settingsLiveText:document.getElementById("settings-live-text"),saveSettingsBtn:document.getElementById("save-settings-btn"),settingsMessage:document.getElementById("settings-message"),portfolioTicker:document.getElementById("position-ticker"),portfolioName:document.getElementById("position-name"),portfolioQuantity:document.getElementById("position-quantity"),portfolioMarket:document.getElementById("position-market"),addPositionBtn:document.getElementById("add-position-btn"),reloadPortfolioBtn:document.getElementById("reload-portfolio-btn"),portfolioMessage:document.getElementById("portfolio-message"),portfolioList:document.getElementById("portfolio-list")};
-    const state={source:"all",sentiment:"all",search:"",onlyAnalyzed:false,portfolio:[]};const flashMap=new Map();const newIds=new Set();let flashWs=null;let analysisWs=null;
-    const esc=(v)=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
-    const sourceLabel=(s)=>sourceOptions.find((i)=>i.value===s)?.label||s||"未知";
-    const sentimentLabel=(s)=>s==="bullish"?"利多":s==="bearish"?"利空":s==="neutral"?"中性":"待分析";
-    const fmtClock=(v)=>{const d=new Date(v);return Number.isNaN(d.getTime())?"--:--":d.toLocaleTimeString("zh-CN",{hour12:false,hour:"2-digit",minute:"2-digit"})};
-    const fmtDate=(v)=>{const d=new Date(v);return Number.isNaN(d.getTime())?(v||"-"):d.toLocaleDateString("zh-CN",{month:"2-digit",day:"2-digit",weekday:"short"})};
-    function setNotice(el,text,error=false){el.textContent=text;el.classList.toggle("error",error)}
-    function renderChipGroup(container,options,current,onSelect){container.innerHTML=options.map((item)=>`<button type="button" class="chip ${item.value===current?"active":""}" data-value="${item.value}">${esc(item.label)}</button>`).join("");container.querySelectorAll(".chip").forEach((node)=>node.addEventListener("click",()=>onSelect(node.dataset.value)))}
-    function updateFilterUI(){renderChipGroup(elements.sourceFilters,sourceOptions,state.source,(v)=>{state.source=v;updateFilterUI();render()});renderChipGroup(elements.sentimentFilters,sentimentOptions,state.sentiment,(v)=>{state.sentiment=v;updateFilterUI();render()})}
-    function mergeFlash(item,markNew){if(!item||typeof item.id!=="number")return;const current=flashMap.get(item.id)||{};flashMap.set(item.id,{...current,...item});if(markNew&&!current.id)newIds.add(item.id)}
-    function getFilteredItems(){const keyword=state.search.trim().toLowerCase();return [...flashMap.values()].sort((a,b)=>new Date(b.pub_time)-new Date(a.pub_time)).filter((item)=>{const analysis=item.analysis||null;const sentiment=analysis?.sentiment||"pending";const haystack=[item.title,item.content,analysis?.summary,analysis?.suggestion,analysis?.portfolio_note].filter(Boolean).join(" ").toLowerCase();if(state.source!=="all"&&item.source!==state.source)return false;if(state.onlyAnalyzed&&!analysis)return false;if(state.sentiment!=="all"&&sentiment!==state.sentiment)return false;if(keyword&&!haystack.includes(keyword))return false;return true})}
-    function renderTopSignal(items){const top=items.filter((i)=>i.analysis).sort((a,b)=>(b.analysis?.score||0)-(a.analysis?.score||0))[0];if(!top?.analysis){elements.topSignal.innerHTML='<div class="empty">当前还没有高分 AI 信号，等待模型完成更多分析。</div>';return}const assets=Array.isArray(top.analysis.affected_assets)?top.analysis.affected_assets:[];elements.topSignal.innerHTML=`<div class="box"><div class="meta"><span class="tag score">${top.analysis.score}/10</span><span class="tag ${top.analysis.sentiment}">${sentimentLabel(top.analysis.sentiment)}</span><span class="tag">${esc(sourceLabel(top.source))}</span></div><h3>${esc(top.title)}</h3><p class="content">${esc(top.analysis.summary||"")}</p><p class="content" style="margin-top:10px;"><strong>建议：</strong>${esc(top.analysis.suggestion||"")}</p>${assets.length?`<div class="meta" style="margin-top:10px;">${assets.map((a)=>`<span class="asset">${esc(a)}</span>`).join("")}</div>`:""}</div>`}
-    function renderFeed(items){if(!items.length){elements.feedList.innerHTML='<div class="empty">没有符合当前过滤条件的快讯。你可以清空筛选，或等待新的实时消息。</div>';return}elements.feedList.innerHTML=items.map((item)=>{const analysis=item.analysis||null;const assets=Array.isArray(analysis?.affected_assets)?analysis.affected_assets:[];const title=item.source_url?`<a href="${esc(item.source_url)}" target="_blank" rel="noreferrer">${esc(item.title)}</a>`:esc(item.title);return `<article class="feed-card ${newIds.has(item.id)?"new":""}"><aside class="timeline"><div class="clock">${fmtClock(item.pub_time)}</div><div class="date">${fmtDate(item.pub_time)}</div><div class="tag">${esc(sourceLabel(item.source))}</div></aside><div><div class="meta" style="margin-bottom:10px;">${analysis?`<span class="tag score">${analysis.score}/10</span>`:'<span class="tag">待分析</span>'}${analysis?`<span class="tag ${analysis.sentiment}">${sentimentLabel(analysis.sentiment)}</span>`:""}${item.is_analyzed?'<span class="tag">已分析</span>':""}</div><h3 class="title">${title}</h3>${item.content?`<p class="content">${esc(item.content)}</p>`:""}${analysis?`<div class="list" style="margin-top:14px;"><div class="two"><div class="box"><label class="label">AI 摘要</label><p>${esc(analysis.summary||"")}</p>${assets.length?`<div class="meta" style="margin-top:10px;">${assets.map((a)=>`<span class="asset">${esc(a)}</span>`).join("")}</div>`:""}</div><div class="box"><label class="label">交易建议</label><p>${esc(analysis.suggestion||"")}</p></div></div>${analysis.portfolio_note?`<div class="box"><label class="label">持仓提示</label><p>${esc(analysis.portfolio_note)}</p></div>`:""}</div>`:'<div class="box" style="margin-top:14px;"><label class="label">分析状态</label><p>这条快讯已入库，AI 分析还在排队或生成中。</p></div>'}</div></article>`}).join("");newIds.clear()}
-    function render(){const items=getFilteredItems();const analyzed=items.filter((i)=>i.analysis).length;elements.statCount.textContent=String(items.length);elements.statAnalyzed.textContent=String(analyzed);elements.metaCount.textContent=`当前显示 ${items.length} 条`;elements.metaSummary.textContent=analyzed?`其中 ${analyzed} 条已带 AI 标签`:"AI 分析正在陆续补齐";renderTopSignal(items);renderFeed(items)}
-    function renderSettings(data){elements.settingsModel.value=data.model||"";elements.settingsInterval.value=data.collect_interval_seconds??300;elements.settingsAuto.checked=Boolean(data.auto_analyze_flash);elements.settingsAutoText.textContent=data.auto_analyze_flash?"开启":"关闭";elements.settingsLive.checked=Boolean(data.live_market_quotes);elements.settingsLiveText.textContent=data.live_market_quotes?"开启":"关闭";elements.settingsModels.innerHTML=(data.available_models||[]).map((m)=>`<option value="${esc(m)}"></option>`).join("");setNotice(elements.settingsMessage,data.ollama_connected?"设置已与 Ollama 同步，可以直接切换到已拉取的模型。":"Ollama 当前不可达，模型切换要等服务恢复后才会真正生效。",!data.ollama_connected)}
-    function renderPortfolio(){if(!state.portfolio.length){elements.portfolioList.innerHTML='<div class="empty">还没有保存任何持仓。新增后，新的 AI 分析会自动参考这些仓位。</div>';setNotice(elements.portfolioMessage,"持仓为空时，AI 会按通用市场模式分析。");return}elements.portfolioList.innerHTML=state.portfolio.map((p)=>`<div class="position"><div class="row"><div><h4>${esc(p.name||p.ticker)}</h4><div class="muted">${esc(p.ticker)}${p.market?` · ${esc(p.market)}`:""}</div></div><button class="btn secondary" type="button" data-delete-id="${p.id}">删除</button></div><div class="meta" style="margin-top:10px;"><span class="tag">数量 ${esc(p.quantity)}</span>${p.cost_basis!=null?`<span class="tag">成本 ${esc(p.cost_basis)}</span>`:""}${p.notes?`<span class="tag">${esc(p.notes)}</span>`:""}</div></div>`).join("");elements.portfolioList.querySelectorAll("[data-delete-id]").forEach((btn)=>btn.addEventListener("click",async()=>deletePosition(Number(btn.dataset.deleteId))));setNotice(elements.portfolioMessage,`当前已保存 ${state.portfolio.length} 条持仓，新的 AI 分析会优先读取它们。`)}
-    async function loadHealth(){try{const r=await fetch("/health");const d=await r.json();elements.statusApp.textContent=d.status==="ok"?"运行中":"异常";elements.statusApp.style.color=d.status==="ok"?"var(--bull)":"var(--bear)";elements.statModel.textContent=d.model||"-";elements.statusOllama.textContent=d.ollama==="connected"?"Ollama 已连接":"Ollama 未连接";elements.statusOllama.style.color=d.ollama==="connected"?"var(--bull)":"var(--bear)";elements.statConnections.textContent=`${d.flash_ws_clients??0} / ${d.ws_clients??0}`}catch{elements.statusApp.textContent="无法连接";elements.statusApp.style.color="var(--bear)";elements.statusOllama.textContent="未知"}}
-    async function loadFlash(){try{const r=await fetch("/api/flash");const items=await r.json();items.forEach((i)=>mergeFlash(i,false));setNotice(elements.statusRefresh,`最后刷新：${new Date().toLocaleString("zh-CN",{hour12:false})}`);render()}catch{elements.feedList.innerHTML='<div class="empty">拉取 /api/flash 失败，请检查后端日志。</div>'}}
-    async function loadSettings(){try{const r=await fetch("/api/v1/settings");if(!r.ok)throw new Error(`HTTP ${r.status}`);renderSettings(await r.json())}catch(e){setNotice(elements.settingsMessage,`加载设置失败：${e.message}`,true)}}
-    async function saveSettings(){const payload={model:elements.settingsModel.value.trim(),collect_interval_seconds:Number(elements.settingsInterval.value||0),auto_analyze_flash:Boolean(elements.settingsAuto.checked),live_market_quotes:Boolean(elements.settingsLive.checked)};if(!payload.model){setNotice(elements.settingsMessage,"默认模型不能为空。",true);return}if(!Number.isFinite(payload.collect_interval_seconds)||payload.collect_interval_seconds<5){setNotice(elements.settingsMessage,"轮询间隔至少为 5 秒。",true);return}setNotice(elements.settingsMessage,"正在保存设置...");try{const r=await fetch("/api/v1/settings",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.detail||`HTTP ${r.status}`)}renderSettings(await r.json());await loadHealth();setNotice(elements.settingsMessage,"设置已保存，新的快讯会按这套配置继续轮询和分析。")}catch(e){setNotice(elements.settingsMessage,`保存失败：${e.message}`,true)}}
-    async function loadPortfolio(){try{const r=await fetch("/api/v1/portfolio");if(!r.ok)throw new Error(`HTTP ${r.status}`);state.portfolio=await r.json();renderPortfolio()}catch(e){setNotice(elements.portfolioMessage,`加载持仓失败：${e.message}`,true)}}
-    async function createPosition(){const ticker=elements.portfolioTicker.value.trim();const name=elements.portfolioName.value.trim();const quantity=Number(elements.portfolioQuantity.value||0);const market=elements.portfolioMarket.value.trim();if(!ticker||!name){setNotice(elements.portfolioMessage,"代码和名称都需要填写。",true);return}setNotice(elements.portfolioMessage,"正在保存持仓...");try{const r=await fetch("/api/v1/portfolio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ticker,name,quantity:Number.isFinite(quantity)?quantity:0,market:market||null})});if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.detail||`HTTP ${r.status}`)}elements.portfolioTicker.value="";elements.portfolioName.value="";elements.portfolioQuantity.value="";elements.portfolioMarket.value="";await loadPortfolio();setNotice(elements.portfolioMessage,"持仓已保存，后续快讯会自动参考它。")}catch(e){setNotice(elements.portfolioMessage,`保存持仓失败：${e.message}`,true)}}
-    async function deletePosition(id){try{const r=await fetch(`/api/v1/portfolio/${id}`,{method:"DELETE"});if(!r.ok&&r.status!==204){const err=await r.json().catch(()=>({}));throw new Error(err.detail||`HTTP ${r.status}`)}await loadPortfolio();setNotice(elements.portfolioMessage,"持仓已删除。")}catch(e){setNotice(elements.portfolioMessage,`删除失败：${e.message}`,true)}}
-    function connectFlashWs(){const proto=location.protocol==="https:"?"wss":"ws";flashWs=new WebSocket(`${proto}://${location.host}/ws/flash`);flashWs.onopen=()=>flashWs.send("ping");flashWs.onmessage=(event)=>{const msg=JSON.parse(event.data);if(msg.type!=="flash")return;mergeFlash(msg.data,true);setNotice(elements.statusRefresh,`最后刷新：${new Date().toLocaleString("zh-CN",{hour12:false})}`);render();loadHealth()};flashWs.onclose=()=>setTimeout(connectFlashWs,3000)}
-    function connectAnalysisWs(){const proto=location.protocol==="https:"?"wss":"ws";analysisWs=new WebSocket(`${proto}://${location.host}/ws`);analysisWs.onopen=()=>analysisWs.send("ping");analysisWs.onmessage=(event)=>{const msg=JSON.parse(event.data);if(msg.type!=="analysis_done")return;const current=flashMap.get(msg.data.news_id);if(!current)return;flashMap.set(msg.data.news_id,{...current,is_analyzed:true,analysis:{...current.analysis,score:msg.data.score,sentiment:msg.data.sentiment,summary:msg.data.summary,suggestion:msg.data.suggestion,portfolio_note:msg.data.portfolio_note}});render()};analysisWs.onclose=()=>setTimeout(connectAnalysisWs,3000)}
-    elements.searchInput.addEventListener("input",(e)=>{state.search=e.target.value||"";render()});elements.toggleAnalyzed.addEventListener("change",(e)=>{state.onlyAnalyzed=Boolean(e.target.checked);render()});elements.settingsAuto.addEventListener("change",(e)=>{elements.settingsAutoText.textContent=e.target.checked?"开启":"关闭"});elements.settingsLive.addEventListener("change",(e)=>{elements.settingsLiveText.textContent=e.target.checked?"开启":"关闭"});elements.reloadBtn.addEventListener("click",loadFlash);elements.recheckBtn.addEventListener("click",async()=>{await loadHealth();await loadSettings();await loadPortfolio()});elements.saveSettingsBtn.addEventListener("click",saveSettings);elements.addPositionBtn.addEventListener("click",createPosition);elements.reloadPortfolioBtn.addEventListener("click",loadPortfolio);
-    updateFilterUI();loadHealth();loadFlash();loadSettings();loadPortfolio();connectFlashWs();connectAnalysisWs();setNotice(elements.statusRefresh,`最后刷新：${new Date().toLocaleString("zh-CN",{hour12:false})}`);setInterval(loadHealth,10000);setInterval(loadFlash,60000);
+    const $ = (id) => document.getElementById(id);
+    const esc = (value) => String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+
+    const sourceName = {
+      jin10: "金十",
+      cls: "财联社",
+      cctv_finance: "央视财经",
+      reuters: "Reuters",
+    };
+
+    const sentimentText = {
+      bullish: "利多",
+      bearish: "利空",
+      neutral: "中性",
+    };
+
+    let flashItems = [];
+    let portfolioItems = [];
+
+    function setNotice(el, text, error = false) {
+      el.textContent = text;
+      el.classList.toggle("error", error);
+    }
+
+    function formatTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "--:--";
+      return date.toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit", weekday: "short" });
+    }
+
+    async function loadHealth() {
+      try {
+        const data = await fetch("/health").then((r) => r.json());
+        $("status-app").textContent = data.status === "ok" ? "运行中" : "异常";
+        $("status-app").style.color = data.status === "ok" ? "var(--mint)" : "var(--red)";
+        $("status-model").textContent = data.model || "-";
+        $("status-ollama").textContent = data.ollama === "connected" ? "Ollama 已连接" : "Ollama 未连接";
+        $("status-ws").textContent = String(data.flash_ws_clients ?? 0);
+      } catch {
+        $("status-app").textContent = "不可达";
+        $("status-app").style.color = "var(--red)";
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const data = await fetch("/api/v1/settings").then((r) => r.json());
+        $("settings-model").value = data.model || "";
+        $("settings-interval").value = data.collect_interval_seconds || 300;
+        $("settings-auto").checked = Boolean(data.auto_analyze_flash);
+        $("settings-live").checked = Boolean(data.live_market_quotes);
+        $("settings-auto-text").textContent = data.auto_analyze_flash ? "开启" : "关闭";
+        $("settings-live-text").textContent = data.live_market_quotes ? "开启" : "关闭";
+        $("model-options").innerHTML = (data.available_models || [])
+          .map((model) => `<option value="${esc(model)}"></option>`)
+          .join("");
+      } catch (error) {
+        setNotice($("settings-msg"), `加载设置失败：${error.message}`, true);
+      }
+    }
+
+    async function saveSettings() {
+      const payload = {
+        model: $("settings-model").value.trim(),
+        collect_interval_seconds: Number($("settings-interval").value || 300),
+        auto_analyze_flash: $("settings-auto").checked,
+        live_market_quotes: $("settings-live").checked,
+      };
+      setNotice($("settings-msg"), "正在保存设置...");
+      try {
+        const response = await fetch("/api/v1/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(await response.text());
+        setNotice($("settings-msg"), "设置已保存，新的轮询和 AI 分析会使用这套参数。");
+        await loadSettings();
+        await loadHealth();
+      } catch (error) {
+        setNotice($("settings-msg"), `保存失败：${error.message}`, true);
+      }
+    }
+
+    function renderFlash() {
+      $("status-flash").textContent = String(flashItems.length);
+      $("flash-summary").textContent = flashItems.length
+        ? `显示最新 ${flashItems.length} 条快讯，WebSocket 会自动推送增量。`
+        : "暂时没有快讯。";
+
+      if (!flashItems.length) {
+        $("flash-list").innerHTML = '<div class="empty">等待 RSSHub 推送新的财经快讯。</div>';
+        return;
+      }
+
+      $("flash-list").innerHTML = flashItems.map((item) => {
+        const analysis = item.analysis;
+        const sentiment = analysis?.sentiment || "pending";
+        const assets = Array.isArray(analysis?.affected_assets) ? analysis.affected_assets : [];
+        return `
+          <article class="flash">
+            <div class="time">
+              <div class="clock">${formatTime(item.pub_time)}</div>
+              <div class="muted">${formatDate(item.pub_time)}</div>
+              <div style="height:8px"></div>
+              <span class="tag">${esc(sourceName[item.source] || item.source || "未知")}</span>
+            </div>
+            <div>
+              <div class="meta">
+                ${analysis ? `<span class="tag score">${esc(analysis.score)}/10</span>` : '<span class="tag">待分析</span>'}
+                ${analysis ? `<span class="tag ${esc(sentiment)}">${esc(sentimentText[sentiment] || sentiment)}</span>` : ""}
+              </div>
+              <h3 class="headline">${esc(item.title)}</h3>
+              ${item.content ? `<p class="content">${esc(item.content)}</p>` : ""}
+              ${analysis ? `
+                <div class="two" style="margin-top:12px">
+                  <div class="box"><label>AI 摘要</label><p>${esc(analysis.summary || "")}</p></div>
+                  <div class="box"><label>交易建议</label><p>${esc(analysis.suggestion || "")}</p></div>
+                </div>
+                ${assets.length ? `<div class="meta" style="margin-top:12px">${assets.map((asset) => `<span class="asset">${esc(asset)}</span>`).join("")}</div>` : ""}
+                ${analysis.portfolio_note ? `<div class="box" style="margin-top:12px"><label>持仓提示</label><p>${esc(analysis.portfolio_note)}</p></div>` : ""}
+              ` : ""}
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function loadFlash() {
+      try {
+        flashItems = await fetch("/api/flash").then((r) => r.json());
+        renderFlash();
+      } catch {
+        $("flash-list").innerHTML = '<div class="empty">加载 /api/flash 失败，请检查后端日志。</div>';
+      }
+    }
+
+    function renderPortfolio() {
+      if (!portfolioItems.length) {
+        $("portfolio-list").innerHTML = '<div class="empty">暂无持仓。可以先添加“原油多单”“黄金”等观察对象。</div>';
+        return;
+      }
+
+      $("portfolio-list").innerHTML = portfolioItems.map((item) => `
+        <div class="box">
+          <div class="row">
+            <div>
+              <strong>${esc(item.name || item.ticker)}</strong>
+              <div class="muted">${esc(item.ticker)} ${item.market ? " / " + esc(item.market) : ""}</div>
+            </div>
+            <span class="tag">数量 ${esc(item.quantity ?? 0)}</span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function loadPortfolio() {
+      try {
+        portfolioItems = await fetch("/api/v1/portfolio").then((r) => r.json());
+        renderPortfolio();
+      } catch (error) {
+        setNotice($("portfolio-msg"), `加载持仓失败：${error.message}`, true);
+      }
+    }
+
+    async function addPosition() {
+      const payload = {
+        ticker: $("position-ticker").value.trim(),
+        name: $("position-name").value.trim(),
+        quantity: Number($("position-quantity").value || 0),
+        market: $("position-market").value.trim() || null,
+      };
+      if (!payload.ticker || !payload.name) {
+        setNotice($("portfolio-msg"), "代码和名称不能为空。", true);
+        return;
+      }
+      try {
+        const response = await fetch("/api/v1/portfolio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(await response.text());
+        $("position-ticker").value = "";
+        $("position-name").value = "";
+        $("position-quantity").value = "";
+        $("position-market").value = "";
+        setNotice($("portfolio-msg"), "持仓已保存。");
+        await loadPortfolio();
+      } catch (error) {
+        setNotice($("portfolio-msg"), `保存持仓失败：${error.message}`, true);
+      }
+    }
+
+    async function runManualAnalysis() {
+      const text = $("manual-text").value.trim();
+      const positions = $("manual-positions").value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (!text) {
+        setNotice($("manual-result"), "请先输入一条快讯。", true);
+        return;
+      }
+
+      $("manual-run").disabled = true;
+      setNotice($("manual-result"), "AI 正在分析，CPU 模式可能需要 1-2 分钟...");
+      try {
+        const response = await fetch("/api/v1/analysis/flash", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, positions }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
+        $("manual-result").classList.remove("error");
+        $("manual-result").innerHTML = `<pre>${esc(JSON.stringify(data, null, 2))}</pre>`;
+      } catch (error) {
+        setNotice($("manual-result"), `分析失败：${error.message}`, true);
+      } finally {
+        $("manual-run").disabled = false;
+      }
+    }
+
+    function connectFlashSocket() {
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      const ws = new WebSocket(`${proto}://${location.host}/ws/flash`);
+      ws.onopen = () => ws.send("ping");
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type !== "flash") return;
+        flashItems = [message.data, ...flashItems.filter((item) => item.id !== message.data.id)].slice(0, 10);
+        renderFlash();
+        loadHealth();
+      };
+      ws.onclose = () => setTimeout(connectFlashSocket, 3000);
+    }
+
+    $("save-settings").addEventListener("click", saveSettings);
+    $("reload-flash").addEventListener("click", loadFlash);
+    $("reload-portfolio").addEventListener("click", loadPortfolio);
+    $("add-position").addEventListener("click", addPosition);
+    $("manual-run").addEventListener("click", runManualAnalysis);
+    $("settings-auto").addEventListener("change", () => $("settings-auto-text").textContent = $("settings-auto").checked ? "开启" : "关闭");
+    $("settings-live").addEventListener("change", () => $("settings-live-text").textContent = $("settings-live").checked ? "开启" : "关闭");
+
+    loadHealth();
+    loadSettings();
+    loadFlash();
+    loadPortfolio();
+    connectFlashSocket();
+    setInterval(loadHealth, 10000);
+    setInterval(loadFlash, 60000);
   </script>
 </body>
 </html>

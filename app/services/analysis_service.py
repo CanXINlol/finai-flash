@@ -22,7 +22,6 @@ from app.websocket.manager import manager
 
 settings = get_settings()
 
-QUOTE_TIMEOUT_SECONDS = 6
 QUOTE_TIMEOUT_CONTEXT = (
     "实时行情查询超时。本次分析只能使用快讯原文和用户持仓；"
     "不得自行编造任何最新价格、点位或涨跌幅。"
@@ -105,7 +104,7 @@ class AnalysisService:
         try:
             return await asyncio.wait_for(
                 MarketDataService(enabled=enabled).build_market_context(text, positions),
-                timeout=QUOTE_TIMEOUT_SECONDS,
+                timeout=settings.market_quote_timeout_seconds,
             )
         except TimeoutError:
             return QUOTE_TIMEOUT_CONTEXT

@@ -1,103 +1,137 @@
-# FinAI-Flash Deployment
+# FinAI-Flash Deployment Guide
+
+FinAI-Flash is designed as a self-hosted financial flash news terminal: low-cost RSS aggregation, local LLM analysis, SQLite persistence, and a browser dashboard.
+
+## Recommended Defaults
+
+These defaults are tuned for a practical MVP on a Windows machine with about 16 GB RAM and an 8 GB GPU. If Docker cannot access the GPU, Ollama will run on CPU, so stability matters more than maximum model size.
+
+| Setting | Recommended | Why |
+| --- | --- | --- |
+| `MODEL` | `qwen2.5:7b` | Good Chinese JSON reliability, fits local machines better than 14B/32B. |
+| `COLLECT_INTERVAL_SECONDS` | `300` | Matches the product goal of near-real-time RSS without overloading SQLite or Ollama. |
+| `AUTO_ANALYZE_FLASH` | `true` | Keeps the dashboard useful automatically. |
+| `AUTO_ANALYSIS_MAX_PENDING` | `3` | Prevents slow local inference from creating an infinite backlog. |
+| `LIVE_MARKET_QUOTES` | `true` | Lets analysis reference a live quote snapshot when available. |
+| `MARKET_QUOTE_TIMEOUT_SECONDS` | `4` | Avoids Yahoo/yfinance latency blocking AI analysis. |
+| `OLLAMA_NUM_CTX` | `2048` | Enough context for flash analysis, much lighter than 4096/8192. |
+| `OLLAMA_NUM_PREDICT` | `768` | Enough room for strict JSON while reducing CPU inference time. |
+| `OLLAMA_TEMPERATURE` | `0.05` | More deterministic JSON output. |
+| `OLLAMA_TIMEOUT` | `180` | Allows CPU inference to finish without hanging forever. |
 
 ## Quick Start
 
-1. Copy the example environment file.
-
-```bash
-cp .env.example .env
-```
-
-2. Optionally edit `.env`.
-
-Recommended defaults for a 16 GB RAM machine:
-
-```env
-MODEL=qwen2.5:7b
-COLLECT_INTERVAL_SECONDS=300
-AUTO_ANALYZE_FLASH=true
-```
-
-3. Start the full stack.
-
-```bash
+```powershell
+cd C:\Users\CanXIN\Desktop\finai-flash\finai-flash
+copy .env.example .env
 docker compose up -d
 ```
 
-4. Open the app.
+Open:
 
 ```text
-http://localhost:8888
+http://127.0.0.1:8888
 ```
 
-## What Starts
+Check health:
 
-- `finai-flash`: FastAPI backend plus built frontend assets
-- `ollama`: local model runtime
-- `ollama-init`: one-shot model pull for `${MODEL}`
-- `rsshub`: local RSS source aggregator
-- `rsshub-redis`: Redis cache for RSSHub
+```powershell
+Invoke-RestMethod http://127.0.0.1:8888/health
+```
 
-## First Boot Notes
+## First Boot
 
-- The first run can take several minutes because `ollama-init` downloads the model.
-- `qwen2.5:7b` is the safest default for 16 GB RAM machines.
-- `qwen2.5:14b` may work on stronger machines, but will be slower.
-- `qwen2.5:32b` is not recommended for 16 GB RAM hosts.
+The first run may take several minutes because Docker needs to pull images and Ollama may need to pull the selected model.
 
-## Useful Commands
+If `ollama-init` fails because DNS cannot reach the Ollama registry, the app can still start when the model already exists in the `ollama-models` volume. The compose file intentionally does not block forever on model pull failure.
 
-Show running services:
+## Common Commands
 
-```bash
+Show services:
+
+```powershell
 docker compose ps
 ```
 
 Watch backend logs:
 
-```bash
-docker compose logs -f finai-flash
+```powershell
+docker logs --tail 120 finai-flash
 ```
 
-Watch model pull progress:
+Watch Ollama logs:
 
-```bash
-docker compose logs -f ollama-init
+```powershell
+docker logs --tail 120 finai-ollama
 ```
 
-Watch RSSHub logs:
+Restart only the backend:
 
-```bash
-docker compose logs -f rsshub
+```powershell
+docker compose up -d --build finai-flash
 ```
 
-Stop everything:
+Stop services without deleting data:
 
-```bash
+```powershell
 docker compose down
 ```
 
-Stop everything and remove volumes:
+## Safe Cleanup
 
-```bash
+Safe cleanup removes generated cache and Docker build cache. It does not delete SQLite data or Ollama models.
+
+```powershell
+.\scripts\cleanup-dev.ps1
+```
+
+Equivalent manual commands:
+
+```powershell
+Get-ChildItem -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item .\.pytest_cache -Recurse -Force -ErrorAction SilentlyContinue
+docker builder prune -f
+```
+
+Avoid this unless you intentionally want to remove containers/images:
+
+```powershell
+docker system prune -a -f
+```
+
+Avoid this unless you intentionally want to delete all app data and downloaded Ollama models:
+
+```powershell
 docker compose down -v
 ```
 
-## Health Checks
+## Manual AI Analysis Test
 
-Backend:
+Use the dashboard `Manual Analyzer`, or call the API directly:
 
-```bash
-curl http://localhost:8888/health
-```
+```powershell
+$body = @{
+  text = "OPEC+据称正在讨论延长自愿减产期限，国际油价盘中快速走高。"
+  positions = @("原油多单", "黄金")
+} | ConvertTo-Json -Depth 5
 
-Latest flash items:
-
-```bash
-curl http://localhost:8888/api/flash
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8888/api/v1/analysis/flash" `
+  -Method Post `
+  -ContentType "application/json; charset=utf-8" `
+  -Body $body
 ```
 
 ## GPU Notes
 
-The compose file includes a commented NVIDIA reservation block under the `ollama` service.
-Uncomment it only if your Docker host already has GPU container runtime support configured.
+The compose file uses `gpus: all` for Ollama. This only helps if Docker Desktop can access your GPU runtime. If Ollama logs show `total_vram="0 B"` or `inference compute ... cpu`, it is running on CPU.
+
+For CPU-only Docker inference, keep `qwen2.5:7b`, `OLLAMA_NUM_CTX=2048`, and `OLLAMA_NUM_PREDICT=768`.
+
+For a faster setup, run Ollama directly on Windows and point the backend to the host Ollama service:
+
+```env
+OLLAMA_HOST=http://host.docker.internal:11434
+```
+
+Then disable or remove the compose `ollama` dependency if you want to fully externalize Ollama later.

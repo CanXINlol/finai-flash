@@ -5,6 +5,9 @@ import asyncio
 from app.db.crud import news as news_crud
 from app.db.session import AsyncSessionLocal
 from app.services.analysis_service import AnalysisService
+from app.config import get_settings
+
+settings = get_settings()
 
 _pending_news_ids: set[int] = set()
 _background_tasks: set[asyncio.Task] = set()
@@ -28,6 +31,12 @@ async def _run_analysis(news_id: int) -> None:
 
 def schedule_auto_analysis(news_id: int) -> bool:
     if news_id in _pending_news_ids:
+        return False
+    if len(_pending_news_ids) >= settings.auto_analysis_max_pending:
+        print(
+            f"[AutoAnalysis] skipped news {news_id}: "
+            f"pending queue reached {settings.auto_analysis_max_pending}"
+        )
         return False
 
     try:

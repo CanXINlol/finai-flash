@@ -43,16 +43,16 @@ class FlashAnalyzer:
         self,
         model: str | None = None,
         base_url: str | None = None,
-        temperature: float = 0.1,
+        temperature: float | None = None,
         timeout: int | None = None,
-        num_predict: int = 1024,
+        num_predict: int | None = None,
         quality_retries: int = 1,
     ):
         self.base_url = (base_url or settings.ollama_host).rstrip("/")
         self.default_model = model or settings.model
-        self.temperature = temperature
+        self.temperature = settings.ollama_temperature if temperature is None else temperature
         self.timeout = timeout or settings.ollama_timeout
-        self.num_predict = num_predict
+        self.num_predict = num_predict or settings.ollama_num_predict
         self.quality_retries = quality_retries
 
     def ensure_ready(self) -> None:
@@ -149,7 +149,8 @@ class FlashAnalyzer:
                     f"Model `{selected_model}` returned invalid JSON. Original error: {exc}"
                 ) from exc
 
-            issues = self._quality_issues(parsed, text)
+            allowed_market_text = f"{text}\n{market_context or ''}"
+            issues = self._quality_issues(parsed, allowed_market_text)
             if not issues:
                 return parsed
 
@@ -230,7 +231,7 @@ class FlashAnalyzer:
             model=model or self.default_model,
             temperature=self.temperature,
             format="json",
-            num_ctx=2048,
+            num_ctx=settings.ollama_num_ctx,
             num_predict=self.num_predict,
             timeout=self.timeout,
         )

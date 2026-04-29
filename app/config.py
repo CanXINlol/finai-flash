@@ -22,13 +22,18 @@ class Settings(BaseSettings):
 
     ollama_host: str = "http://localhost:11434"
     model: str = "qwen2.5:7b"
-    ollama_timeout: int = 120
+    ollama_timeout: int = 180
+    ollama_num_ctx: int = 2048
+    ollama_num_predict: int = 768
+    ollama_temperature: float = 0.05
     rsshub_base_url: str = "http://localhost:1200"
 
     collect_interval_seconds: int = 300
     max_news_age_hours: int = 24
     auto_analyze_flash: bool = True
+    auto_analysis_max_pending: int = 3
     live_market_quotes: bool = True
+    market_quote_timeout_seconds: int = 4
 
     alert_score_threshold: int = 7
     analysis_language: str = "zh"
