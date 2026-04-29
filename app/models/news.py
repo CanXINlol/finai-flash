@@ -56,6 +56,7 @@ class NewsItemList(SQLModel):
 class FlashAnalysisSummaryRead(SQLModel):
     score: int
     sentiment: Sentiment
+    affected_assets: list[str] = Field(default_factory=list)
     summary: str
     suggestion: str
     portfolio_note: Optional[str] = None

@@ -11,7 +11,7 @@ router = APIRouter(tags=["flash"])
 
 @router.get("/flash", response_model=list[FlashItemRead])
 async def get_flash(
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=50),
     svc: NewsService = Depends(get_news_service),
 ):
     return await svc.get_latest_flash(limit=limit)

@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     auto_analyze_flash: bool = True
     auto_analysis_max_pending: int = 3
     live_market_quotes: bool = True
+    market_quote_exact_prices: bool = False
     market_quote_timeout_seconds: int = 4
 
     alert_score_threshold: int = 7

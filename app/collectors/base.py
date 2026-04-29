@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from html import unescape
 
 import feedparser
 import httpx
@@ -95,11 +97,21 @@ class RSSCollector(BaseCollector):
 
     @staticmethod
     def _extract_content(entry, fallback_title: str) -> str:
-        return (
+        raw = (
             entry.get("summary")
             or entry.get("description")
             or fallback_title
-        ).strip()
+        )
+        return clean_feed_text(raw)
+
+
+def clean_feed_text(value: str) -> str:
+    text = unescape(str(value or ""))
+    text = re.sub(r"<img\b[^>]*>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 def build_rsshub_url(path: str) -> str:

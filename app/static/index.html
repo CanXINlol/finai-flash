@@ -242,6 +242,31 @@
       gap: 14px;
     }
 
+    .flash.important {
+      border-color: rgba(245, 196, 95, 0.62);
+      background:
+        linear-gradient(90deg, rgba(245, 196, 95, 0.14), transparent 46%),
+        var(--panel-2);
+      box-shadow: 0 18px 70px rgba(245, 196, 95, 0.12);
+    }
+
+    .flash-head {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .pager {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+    }
+
     .time {
       border-right: 1px solid var(--line);
       padding-right: 12px;
@@ -256,6 +281,15 @@
       margin: 0 0 10px;
       font-size: 20px;
       line-height: 1.45;
+    }
+
+    .flash-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-top: 12px;
     }
 
     .meta {
@@ -403,6 +437,7 @@
           <button id="reload-flash" class="btn secondary">刷新快讯</button>
         </div>
         <div id="flash-list" class="list"></div>
+        <div id="flash-pager" class="pager"></div>
       </main>
     </section>
   </div>
@@ -431,6 +466,10 @@
 
     let flashItems = [];
     let portfolioItems = [];
+    let currentFlashPage = 1;
+    const flashPageSize = 10;
+    const importantScoreThreshold = 7;
+    const analyzingIds = new Set();
 
     function setNotice(el, text, error = false) {
       el.textContent = text;
@@ -447,6 +486,19 @@
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return "";
       return date.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit", weekday: "short" });
+    }
+
+    function cleanFlashContent(value) {
+      const box = document.createElement("div");
+      box.innerHTML = String(value || "").replace(/<img\b[^>]*>/gi, "").replace(/<br\s*\/?>/gi, " ");
+      return box.textContent.replace(/\s+/g, " ").trim();
+    }
+
+    function sentimentLabel(sentiment, assets) {
+      const base = sentimentText[sentiment] || sentiment || "待判断";
+      const cleanAssets = (assets || []).filter(Boolean).slice(0, 3);
+      if (!cleanAssets.length || sentiment === "neutral") return base;
+      return `${base} ${cleanAssets.join("、")}`;
     }
 
     async function loadHealth() {
@@ -505,21 +557,30 @@
 
     function renderFlash() {
       $("status-flash").textContent = String(flashItems.length);
+      const totalPages = Math.max(1, Math.ceil(flashItems.length / flashPageSize));
+      currentFlashPage = Math.min(Math.max(1, currentFlashPage), totalPages);
+      const start = (currentFlashPage - 1) * flashPageSize;
+      const pageItems = flashItems.slice(start, start + flashPageSize);
       $("flash-summary").textContent = flashItems.length
-        ? `显示最新 ${flashItems.length} 条快讯，WebSocket 会自动推送增量。`
+        ? `显示最新 ${flashItems.length} 条快讯，每页 10 条，当前第 ${currentFlashPage}/${totalPages} 页。`
         : "暂时没有快讯。";
 
       if (!flashItems.length) {
         $("flash-list").innerHTML = '<div class="empty">等待 RSSHub 推送新的财经快讯。</div>';
+        $("flash-pager").innerHTML = "";
         return;
       }
 
-      $("flash-list").innerHTML = flashItems.map((item) => {
+      $("flash-list").innerHTML = pageItems.map((item) => {
         const analysis = item.analysis;
         const sentiment = analysis?.sentiment || "pending";
         const assets = Array.isArray(analysis?.affected_assets) ? analysis.affected_assets : [];
+        const isAnalyzing = analyzingIds.has(item.id);
+        const buttonDisabled = Boolean(analysis) || isAnalyzing;
+        const isImportant = Number(analysis?.score || 0) >= importantScoreThreshold;
+        const content = cleanFlashContent(item.content);
         return `
-          <article class="flash">
+          <article class="flash ${isImportant ? "important" : ""}">
             <div class="time">
               <div class="clock">${formatTime(item.pub_time)}</div>
               <div class="muted">${formatDate(item.pub_time)}</div>
@@ -527,12 +588,18 @@
               <span class="tag">${esc(sourceName[item.source] || item.source || "未知")}</span>
             </div>
             <div>
-              <div class="meta">
-                ${analysis ? `<span class="tag score">${esc(analysis.score)}/10</span>` : '<span class="tag">待分析</span>'}
-                ${analysis ? `<span class="tag ${esc(sentiment)}">${esc(sentimentText[sentiment] || sentiment)}</span>` : ""}
+              <div class="flash-head">
+                <div class="meta">
+                  ${analysis ? `<span class="tag ${esc(sentiment)}">${esc(sentimentLabel(sentiment, assets))}</span>` : '<span class="tag">待分析</span>'}
+                </div>
+                <button
+                  class="btn ${analysis ? "secondary" : ""}"
+                  data-analyze-id="${esc(item.id)}"
+                  ${buttonDisabled ? "disabled" : ""}
+                >${isAnalyzing ? "分析中..." : analysis ? "已分析" : "AI 分析"}</button>
               </div>
               <h3 class="headline">${esc(item.title)}</h3>
-              ${item.content ? `<p class="content">${esc(item.content)}</p>` : ""}
+              ${content ? `<p class="content">${esc(content)}</p>` : ""}
               ${analysis ? `
                 <div class="two" style="margin-top:12px">
                   <div class="box"><label>AI 摘要</label><p>${esc(analysis.summary || "")}</p></div>
@@ -545,11 +612,76 @@
           </article>
         `;
       }).join("");
+      renderFlashPager(totalPages);
+      bindAnalyzeButtons();
+    }
+
+    function renderFlashPager(totalPages) {
+      if (totalPages <= 1) {
+        $("flash-pager").innerHTML = "";
+        return;
+      }
+      $("flash-pager").innerHTML = `
+        <button id="flash-prev" class="btn secondary" ${currentFlashPage <= 1 ? "disabled" : ""}>上一页</button>
+        <span class="muted">第 ${currentFlashPage} / ${totalPages} 页</span>
+        <button id="flash-next" class="btn secondary" ${currentFlashPage >= totalPages ? "disabled" : ""}>下一页</button>
+      `;
+      $("flash-prev")?.addEventListener("click", () => {
+        currentFlashPage -= 1;
+        renderFlash();
+      });
+      $("flash-next")?.addEventListener("click", () => {
+        currentFlashPage += 1;
+        renderFlash();
+      });
+    }
+
+    function mergeAnalysis(newsId, analysis) {
+      flashItems = flashItems.map((item) => {
+        if (item.id !== newsId) return item;
+        return {
+          ...item,
+          is_analyzed: true,
+          analysis: {
+            score: analysis.score,
+            sentiment: analysis.sentiment,
+            affected_assets: analysis.affected_assets || [],
+            summary: analysis.summary,
+            suggestion: analysis.suggestion,
+            portfolio_note: analysis.portfolio_note,
+          },
+        };
+      });
+      renderFlash();
+    }
+
+    function bindAnalyzeButtons() {
+      document.querySelectorAll("[data-analyze-id]").forEach((button) => {
+        button.addEventListener("click", () => analyzeFlashItem(Number(button.dataset.analyzeId)));
+      });
+    }
+
+    async function analyzeFlashItem(newsId) {
+      if (!newsId || analyzingIds.has(newsId)) return;
+      analyzingIds.add(newsId);
+      renderFlash();
+
+      try {
+        const response = await fetch(`/api/v1/analysis/${newsId}/trigger`, { method: "POST" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
+        mergeAnalysis(newsId, data);
+      } catch (error) {
+        setNotice($("flash-summary"), `分析失败：${error.message}`, true);
+      } finally {
+        analyzingIds.delete(newsId);
+        await loadFlash();
+      }
     }
 
     async function loadFlash() {
       try {
-        flashItems = await fetch("/api/flash").then((r) => r.json());
+        flashItems = await fetch("/api/flash?limit=50").then((r) => r.json());
         renderFlash();
       } catch {
         $("flash-list").innerHTML = '<div class="empty">加载 /api/flash 失败，请检查后端日志。</div>';
@@ -650,7 +782,7 @@
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
         if (message.type !== "flash") return;
-        flashItems = [message.data, ...flashItems.filter((item) => item.id !== message.data.id)].slice(0, 10);
+        flashItems = [message.data, ...flashItems.filter((item) => item.id !== message.data.id)].slice(0, 50);
         renderFlash();
         loadHealth();
       };
@@ -671,7 +803,7 @@
     loadPortfolio();
     connectFlashSocket();
     setInterval(loadHealth, 10000);
-    setInterval(loadFlash, 60000);
+    setInterval(loadFlash, 5000);
   </script>
 </body>
 </html>

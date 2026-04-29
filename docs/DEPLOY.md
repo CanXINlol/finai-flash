@@ -12,7 +12,8 @@ These defaults are tuned for a practical MVP on a Windows machine with about 16 
 | `COLLECT_INTERVAL_SECONDS` | `300` | Matches the product goal of near-real-time RSS without overloading SQLite or Ollama. |
 | `AUTO_ANALYZE_FLASH` | `true` | Keeps the dashboard useful automatically. |
 | `AUTO_ANALYSIS_MAX_PENDING` | `3` | Prevents slow local inference from creating an infinite backlog. |
-| `LIVE_MARKET_QUOTES` | `true` | Lets analysis reference a live quote snapshot when available. |
+| `LIVE_MARKET_QUOTES` | `true` | Lets analysis identify related market assets. |
+| `MARKET_QUOTE_EXACT_PRICES` | `false` | Keep false unless you connect a trusted quote provider; avoids AI using mismatched free-source prices. |
 | `MARKET_QUOTE_TIMEOUT_SECONDS` | `4` | Avoids Yahoo/yfinance latency blocking AI analysis. |
 | `OLLAMA_NUM_CTX` | `2048` | Enough context for flash analysis, much lighter than 4096/8192. |
 | `OLLAMA_NUM_PREDICT` | `768` | Enough room for strict JSON while reducing CPU inference time. |

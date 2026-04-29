@@ -34,7 +34,9 @@ HORIZON_PATTERN = re.compile(r"(分钟|小时|日内|短线|本周|未来\d+[天
 RISK_PATTERN = re.compile(r"(止损|失效|若|如果|风险|跌破|站稳|确认|除非)")
 YEAR_PATTERN = re.compile(r"(19|20)\d{2}")
 MARKET_METRIC_PATTERN = re.compile(
-    r"(?:USD|US\$|\$|¥|￥|人民币)?\s*\d+(?:\.\d+)?\s*(?:万亿美元|亿美元|万亿|美元|美金|元|点|bp|bps|%|％)"
+    r"(?:USD|US\$|\$|¥|￥|人民币)\s*\d+(?:\.\d+)?\s*(?:万亿美元|亿美元|万美元|美元|美金|元|点|bp|bps|%|％)?"
+    r"|"
+    r"\d+(?:\.\d+)?\s*(?:万亿美元|亿美元|万美元|美元|美金|元|点|bp|bps|%|％)"
 )
 
 
@@ -159,6 +161,8 @@ class FlashAnalyzer:
                 quality_feedback = build_retry_feedback(issues)
                 continue
 
+            if any("实时价格" in issue or "点位" in issue or "涨跌幅" in issue for issue in issues):
+                parsed.trading_suggestion = self._price_safe_suggestion(parsed)
             print(
                 f"[AnalysisQuality] Model `{selected_model}` returned a low-confidence analysis: "
                 + "; ".join(issues)
@@ -366,6 +370,17 @@ class FlashAnalyzer:
     def _extract_market_metrics(text: str) -> list[str]:
         normalized = str(text or "").replace(",", "").replace("，", "").replace("％", "%")
         return [" ".join(match.split()) for match in MARKET_METRIC_PATTERN.findall(normalized)]
+
+    @staticmethod
+    def _price_safe_suggestion(result: FlashAnalysis) -> str:
+        direction = result.bullish_bearish or "中性"
+        assets = "、".join(result.affected_assets[:3]) if result.affected_assets else "相关资产"
+        return (
+            f"方向上偏{direction}，优先观察{assets}；时间窗口为日内至未来1-3个交易日。"
+            "执行上等待消息落地、成交量或相关政策/库存/财报数据确认后再调整仓位；"
+            "若后续官方表态、基本面数据或风险偏好与当前快讯逻辑相反，则该判断失效。"
+            "由于行情快照可能延迟，本建议不使用具体价格、目标位或止损价。"
+        )
 
 
 _flash_analyzer: FlashAnalyzer | None = None

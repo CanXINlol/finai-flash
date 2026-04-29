@@ -67,6 +67,7 @@ class NewsService:
                 summary = FlashAnalysisSummaryRead(
                     score=analysis.score,
                     sentiment=analysis.sentiment,
+                    affected_assets=self._extract_assets(analysis.reasoning),
                     summary=analysis.summary,
                     suggestion=analysis.suggestion,
                     portfolio_note=analysis.portfolio_note,
@@ -87,3 +88,16 @@ class NewsService:
             )
 
         return result
+
+    @staticmethod
+    def _extract_assets(reasoning: str | None) -> list[str]:
+        text = str(reasoning or "")
+        marker = "受影响资产："
+        if marker not in text:
+            return []
+        asset_text = text.split(marker, 1)[1].split("。", 1)[0]
+        return [
+            item.strip()
+            for item in asset_text.replace("、", ",").replace("，", ",").split(",")
+            if item.strip() and item.strip() != "暂未明确"
+        ]
